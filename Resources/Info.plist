@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Menu bar only: no dock icon, no main menu bar window. -->
+    <key>LSUIElement</key>
+    <true/>
+
+    <key>CFBundleName</key>
+    <string>AIStat</string>
+    <key>CFBundleDisplayName</key>
+    <string>AIStat</string>
+    <key>CFBundleIdentifier</key>
+    <string>dev.mgks.aistat</string>
+    <key>CFBundleExecutable</key>
+    <string>AIStat</string>
+
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.developer-tools</string>
+
+    <key>NSHighResolutionCapable</key>
+    <true/>
+
+    <!-- Outbound network to AI providers. No incoming connections. -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>AIStat checks local AI servers such as Ollama.</string>
+</dict>
+</plist>

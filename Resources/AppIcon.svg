@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AIStat logo source. A gauge/meter motif for a quota monitor. -->
+<!-- Rendered to AppIcon.iconset -> AppIcon.icns by `make icon`. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- macOS-style rounded squircle background. -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F2A44"/>
+      <stop offset="1" stop-color="#0E1526"/>
+    </linearGradient>
+    <!-- Arc gradient: green -> yellow -> red, the quota-health spectrum. -->
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34C759"/>
+      <stop offset="0.55" stop-color="#FFD60A"/>
+      <stop offset="1" stop-color="#FF453A"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <!-- Continuous-corner squircle approximation. -->
+      <path d="M 512 64
+               C 256 64 64 256 64 512
+               C 64 768 256 960 512 960
+               C 768 960 960 768 960 512
+               C 960 256 768 64 512 64 Z"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  </g>
+
+  <!-- Outer gauge track (faint). -->
+  <path d="M 300 680 A 260 260 0 1 1 724 680"
+        fill="none" stroke="#2C3A5A" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- Active arc, ~75% filled. -->
+  <path d="M 300 680 A 260 260 0 1 1 690 318"
+        fill="none" stroke="url(#arc)" stroke-width="36" stroke-linecap="round"/>
+
+  <!-- Needle pivot. -->
+  <circle cx="512" cy="512" r="34" fill="#E6ECFF"/>
+
+  <!-- Needle pointing to ~75%. -->
+  <line x1="512" y1="512" x2="700" y2="360"
+        stroke="#E6ECFF" stroke-width="18" stroke-linecap="round"/>
+
+  <!-- Tick marks at the cardinal positions. -->
+  <g fill="#5A6B8C">
+    <circle cx="300" cy="680" r="10"/>
+    <circle cx="252" cy="512" r="10"/>
+    <circle cx="300" cy="344" r="10"/>
+    <circle cx="512" cy="252" r="10"/>
+    <circle cx="724" cy="344" r="10"/>
+    <circle cx="772" cy="512" r="10"/>
+    <circle cx="724" cy="680" r="10"/>
+  </g>
+</svg>
