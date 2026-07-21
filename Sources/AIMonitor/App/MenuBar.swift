@@ -6,37 +6,37 @@ import AppKit
 /// colour to the menu bar (light/dark) automatically.
 enum MonitorMenuBarIcon {
     static let image: NSImage = {
-        // Menu bar icons should be roughly 18pt; render at 2x for retina.
-        let renderSize: CGFloat = 36
-        let displaySize: CGFloat = 18
+        // Apple menu bar icons target ~18pt visually. Render at 2x for retina.
+        let renderSize: CGFloat = 40
+        let displaySize: CGFloat = 20
         let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
 
         let s = renderSize
-        let lw = s * 0.038    // thin stroke (was 0.075)
+        let lw = s * 0.052    // ~1pt at display size, visible but not heavy
 
-        // Rounded rect outline with generous padding.
-        let inset = s * 0.19
+        // Rounded rect outline. Fill ~73% of frame like native icons.
+        let inset = s * 0.135
         let rect = NSRect(x: inset, y: inset,
                           width: s - 2 * inset, height: s - 2 * inset)
-        let path = NSBezierPath(roundedRect: rect, xRadius: s * 0.14, yRadius: s * 0.14)
+        let path = NSBezierPath(roundedRect: rect, xRadius: s * 0.12, yRadius: s * 0.12)
         path.lineWidth = lw
         path.lineJoinStyle = .round
         path.stroke()
 
         // Graph bump inside the frame.
         let bump = NSBezierPath()
-        let baseY = s * 0.57
+        let baseY = s * 0.56
         let peakY = s * 0.38
-        bump.move(to: NSPoint(x: s * 0.32, y: baseY))
+        bump.move(to: NSPoint(x: s * 0.31, y: baseY))
         bump.line(to: NSPoint(x: s * 0.38, y: baseY))
         bump.curve(to: NSPoint(x: s * 0.5, y: peakY),
-                   controlPoint1: NSPoint(x: s * 0.44, y: baseY),
-                   controlPoint2: NSPoint(x: s * 0.44, y: baseY))
+                   controlPoint1: NSPoint(x: s * 0.43, y: baseY),
+                   controlPoint2: NSPoint(x: s * 0.43, y: baseY))
         bump.curve(to: NSPoint(x: s * 0.62, y: baseY),
-                   controlPoint1: NSPoint(x: s * 0.56, y: peakY),
-                   controlPoint2: NSPoint(x: s * 0.56, y: peakY))
-        bump.line(to: NSPoint(x: s * 0.68, y: baseY))
+                   controlPoint1: NSPoint(x: s * 0.57, y: peakY),
+                   controlPoint2: NSPoint(x: s * 0.57, y: peakY))
+        bump.line(to: NSPoint(x: s * 0.69, y: baseY))
         bump.lineWidth = lw
         bump.lineCapStyle = .round
         bump.stroke()
