@@ -1,59 +1,47 @@
 import Foundation
 import SwiftUI
 
-/// Persistent credential storage. Loads keys eagerly from Keychain at init
-/// so they survive view recreation (fixes the "wiped on tab switch" bug).
-/// Lives as a single shared object inside AppViewModel.
+/// Owns provider state, drives refresh, and exposes everything the UI binds to.
+/// Credential strings live directly here as @Published so SwiftUI bindings
+/// ($viewModel.minimaxKey) propagate reliably. Nested ObservableObjects break
+/// onChange in this SDK; flattening avoids that entirely.
 @MainActor
-final class CredentialsStore: ObservableObject {
-    @Published var minimaxKey: String = ""
-    @Published var zaiKey: String = ""
+final class AppViewModel: ObservableObject {
+
+    // MARK: - Credentials (flat @Published for reliable SwiftUI binding)
+
+    @Published public var minimaxKey: String = ""
+    @Published public var zaiKey: String = ""
 
     private let secrets = KeychainStore()
 
-    init() {
-        minimaxKey = secrets.get("minimax.apiKey") ?? ""
-        zaiKey = secrets.get("zai.apiKey") ?? ""
-    }
+    public var minimaxConfigured: Bool { !minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty }
+    public var zaiConfigured: Bool { !zaiKey.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    func saveMinimax() {
-        if minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty {
-            secrets.remove("minimax.apiKey")
-        } else {
-            try? secrets.set(minimaxKey, for: "minimax.apiKey")
-        }
-    }
-
-    func saveZai() {
-        if zaiKey.trimmingCharacters(in: .whitespaces).isEmpty {
-            secrets.remove("zai.apiKey")
-        } else {
-            try? secrets.set(zaiKey, for: "zai.apiKey")
-        }
-    }
-
-    var minimaxConfigured: Bool { !minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty }
-    var zaiConfigured: Bool { !zaiKey.trimmingCharacters(in: .whitespaces).isEmpty }
-
-    func isConfigured(_ id: String) -> Bool {
+    func isProviderConfigured(_ id: String) -> Bool {
         switch id {
         case "minimax": return minimaxConfigured
         case "zai": return zaiConfigured
         default: return false
         }
     }
-}
 
-/// Owns provider state, drives refresh, and exposes everything the UI binds to.
-@MainActor
-final class AppViewModel: ObservableObject {
-
-    /// Called by CredentialsStore after a key is saved. Triggers a refresh
-    /// so newly-configured providers appear immediately.
-    func credentialsDidChange() {
-        objectWillChange.send()
+    /// Save a key to Keychain. Called from the UI on every change.
+    func saveMinimaxKey() {
+        let trimmed = minimaxKey.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { secrets.remove("minimax.apiKey") }
+        else { try? secrets.set(trimmed, for: "minimax.apiKey") }
         refreshAll()
     }
+
+    func saveZaiKey() {
+        let trimmed = zaiKey.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { secrets.remove("zai.apiKey") }
+        else { try? secrets.set(trimmed, for: "zai.apiKey") }
+        refreshAll()
+    }
+
+    // MARK: - Provider status state
 
     @Published public private(set) var statuses: [String: ProviderStatus] = [:]
     @Published public private(set) var errors: [String: String] = [:]
@@ -62,14 +50,16 @@ final class AppViewModel: ObservableObject {
     @Published public var refreshInterval: TimeInterval = AppSettings.defaultRefreshInterval
 
     public let providers: [any AIProvider]
-    public var credentials = CredentialsStore()
-
     private let http = HTTPClient()
-    private let secrets = KeychainStore()
     private var scheduler: RefreshScheduler?
 
     public init() {
-        self.providers = ProviderRegistry.makeDefault(http: http, secrets: secrets)
+        // Load existing keys from Keychain so they appear on launch.
+        let kc = KeychainStore()
+        self.minimaxKey = kc.get("minimax.apiKey") ?? ""
+        self.zaiKey = kc.get("zai.apiKey") ?? ""
+
+        self.providers = ProviderRegistry.makeDefault(http: http, secrets: KeychainStore())
         self.scheduler = RefreshScheduler(interval: AppSettings.defaultRefreshInterval) { [weak self] in
             self?.refreshAll()
         }
@@ -85,12 +75,13 @@ final class AppViewModel: ObservableObject {
         scheduler?.setInterval(value)
     }
 
+    // MARK: - Active providers
+
     /// Providers that are both enabled in prefs AND have credentials entered.
     public var activeProviders: [any AIProvider] {
         providers.filter { isProviderActive($0.id) }
     }
 
-    /// True if at least one provider is enabled and configured.
     public var hasActiveProviders: Bool {
         !activeProviders.isEmpty
     }
@@ -109,11 +100,8 @@ final class AppViewModel: ObservableObject {
     }
 
     func isProviderEnabled(_ id: String) -> Bool {
-        // If the user has explicitly toggled this provider, honour that.
-        // Otherwise default ON whenever a key is present, so adding a key
-        // in Credentials immediately activates the provider.
         if let override = enabledOverrides[id] { return override }
-        return credentials.isConfigured(id)
+        return isProviderConfigured(id)   // default ON when key present
     }
 
     func setProviderEnabled(_ id: String, _ on: Bool) {
@@ -124,13 +112,15 @@ final class AppViewModel: ObservableObject {
             .joined(separator: ",")
         UserDefaults.standard.set(raw, forKey: Self.enabledKey)
         objectWillChange.send()
+        refreshAll()
     }
 
     func isProviderActive(_ id: String) -> Bool {
-        isProviderEnabled(id) && credentials.isConfigured(id)
+        isProviderEnabled(id) && isProviderConfigured(id)
     }
 
-    /// Refresh only active providers. Cached data is retained on failure.
+    // MARK: - Refresh
+
     public func refreshAll() {
         guard !isRefreshing else { return }
         let targets = activeProviders
@@ -164,9 +154,8 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    /// The headline percentage for the menu bar summary.
-    /// Remaining mode: minimum remaining % across active providers.
-    /// Used mode: maximum used % across active providers.
+    // MARK: - Summary
+
     public var summaryPercent: Double? {
         let pcts = activeProviders.compactMap { statuses[$0.id]?.snapshot.remainingPercent }
         guard !pcts.isEmpty else { return nil }

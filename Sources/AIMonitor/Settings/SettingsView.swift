@@ -102,7 +102,7 @@ private struct ProvidersTab: View {
                                 .foregroundStyle(.secondary)
                             VStack(alignment: .leading) {
                                 Text(provider.displayName)
-                                if !viewModel.credentials.isConfigured(provider.id) {
+                                if !viewModel.isProviderConfigured(provider.id) {
                                     Text("No API key set")
                                         .font(.caption2)
                                         .foregroundStyle(.orange)
@@ -137,10 +137,9 @@ private struct CredentialsTab: View {
                     Text("International (minimax.io)").tag("international")
                     Text("China (minimaxi.com)").tag("china")
                 }
-                SecureField("API Key", text: $viewModel.credentials.minimaxKey)
-                    .onChange(of: viewModel.credentials.minimaxKey) { _ in
-                        viewModel.credentials.saveMinimax()
-                        viewModel.credentialsDidChange()
+                SecureField("API Key", text: $viewModel.minimaxKey)
+                    .onChange(of: viewModel.minimaxKey) { _ in
+                        viewModel.saveMinimaxKey()
                     }
             }
 
@@ -149,10 +148,9 @@ private struct CredentialsTab: View {
                     Text("International (z.ai)").tag("international")
                     Text("China (bigmodel.cn)").tag("china")
                 }
-                SecureField("API Key", text: $viewModel.credentials.zaiKey)
-                    .onChange(of: viewModel.credentials.zaiKey) { _ in
-                        viewModel.credentials.saveZai()
-                        viewModel.credentialsDidChange()
+                SecureField("API Key", text: $viewModel.zaiKey)
+                    .onChange(of: viewModel.zaiKey) { _ in
+                        viewModel.saveZaiKey()
                     }
             }
 
