@@ -25,7 +25,7 @@ public actor HTTPClient {
         config.timeoutIntervalForRequest = timeout
         config.timeoutIntervalForResource = timeout + 5
         config.waitsForConnectivity = false
-        config.httpAdditionalHeaders = ["User-Agent": "AIStat/0.1"]
+        config.httpAdditionalHeaders = ["User-Agent": "AIMonitor/0.1"]
         self.session = URLSession(configuration: config)
     }
 

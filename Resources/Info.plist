@@ -7,13 +7,13 @@
     <true/>
 
     <key>CFBundleName</key>
-    <string>AIStat</string>
+    <string>AIMonitor</string>
     <key>CFBundleDisplayName</key>
-    <string>AIStat</string>
+    <string>AIMonitor</string>
     <key>CFBundleIdentifier</key>
-    <string>dev.mgks.aistat</string>
+    <string>dev.mgks.aimonitor</string>
     <key>CFBundleExecutable</key>
-    <string>AIStat</string>
+    <string>AIMonitor</string>
 
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
@@ -36,6 +36,6 @@
 
     <!-- Outbound network to AI providers. No incoming connections. -->
     <key>NSLocalNetworkUsageDescription</key>
-    <string>AIStat checks local AI servers such as Ollama.</string>
+    <string>AIMonitor checks local AI servers such as Ollama.</string>
 </dict>
 </plist>

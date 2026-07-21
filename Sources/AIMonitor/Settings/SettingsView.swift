@@ -15,7 +15,7 @@ struct SettingsView: View {
             CredentialsTab(viewModel: viewModel)
                 .tabItem { Label("Credentials", systemImage: "key.fill") }
         }
-        .frame(width: 440, height: 420)
+        .frame(width: 460, height: 440)
     }
 }
 
@@ -26,6 +26,8 @@ private struct GeneralTab: View {
     @AppStorage(AppSettings.Keys.launchAtLogin) private var launchAtLogin = false
     @AppStorage(AppSettings.Keys.refreshInterval) private var interval = AppSettings.defaultRefreshInterval
     @AppStorage(AppSettings.Keys.appearance) private var appearance = "system"
+    @AppStorage(AppSettings.Keys.showSummary) private var showSummary = false
+    @AppStorage(AppSettings.Keys.summaryMode) private var summaryMode = "remaining"
     @AppStorage(AppSettings.Keys.notifyUnder20) private var notifyUnder20 = true
     @AppStorage(AppSettings.Keys.notifyUnder10) private var notifyUnder10 = true
     @AppStorage(AppSettings.Keys.notifyExhausted) private var notifyExhausted = true
@@ -34,7 +36,7 @@ private struct GeneralTab: View {
     var body: some View {
         Form {
             Section("Startup") {
-                Toggle("Launch AIStat on login", isOn: $launchAtLogin)
+                Toggle("Launch AIMonitor on login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { newValue in LoginItem.set(newValue) }
             }
 
@@ -50,6 +52,19 @@ private struct GeneralTab: View {
             Section("Appearance") {
                 Picker("Theme", selection: $appearance) {
                     ForEach(AppSettings.appearanceOptions, id: \.self) { Text($0.capitalized).tag($0) }
+                }
+                .onChange(of: appearance) { _ in AppearanceManager.apply() }
+            }
+
+            Section("Menu bar summary") {
+                Toggle("Show usage summary in menu bar", isOn: $showSummary)
+                if showSummary {
+                    Picker("Display mode", selection: $summaryMode) {
+                        ForEach(AppSettings.summaryModes, id: \.self) {
+                            Text($0.capitalized).tag($0)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
             }
 
@@ -69,38 +84,42 @@ private struct GeneralTab: View {
 
 private struct ProvidersTab: View {
     @ObservedObject var viewModel: AppViewModel
-    @AppStorage(AppSettings.Keys.enabledProviders) private var enabledData = ""
-
-    private var enabled: Set<String> {
-        get { Set(enabledData.split(separator: ",").map(String.init)) }
-    }
 
     var body: some View {
         Form {
             Section("Enabled providers") {
                 ForEach(viewModel.providers, id: \.id) { provider in
-                    let isOn = enabled.contains(provider.id)
-                    Toggle(provider.displayName, isOn: Binding(
+                    let isOn = viewModel.isProviderEnabled(provider.id)
+                    Toggle(isOn: Binding(
                         get: { isOn },
-                        set: { newValue in toggle(provider.id, on: newValue) }
-                    ))
-                    .disabled(true)   // enable/disable wiring lands with the Providers UI v1.1
+                        set: { newValue in
+                            viewModel.setProviderEnabled(provider.id, newValue)
+                            if newValue { viewModel.refreshAll() }
+                        }
+                    )) {
+                        HStack {
+                            Image(systemName: provider.symbolName)
+                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading) {
+                                Text(provider.displayName)
+                                if !viewModel.credentials.isConfigured(provider.id) {
+                                    Text("No API key set")
+                                        .font(.caption2)
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             Section {
-                Text("Enable/disable toggles take effect in the next release. All configured providers run today.")
+                Text("Enable a provider, then add its API key in the Credentials tab. Only enabled providers with keys appear in the menu bar popover.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .padding()
-    }
-
-    private func toggle(_ id: String, on: Bool) {
-        var set = enabled
-        if on { set.insert(id) } else { set.remove(id) }
-        enabledData = set.sorted().joined(separator: ",")
     }
 }
 
@@ -111,8 +130,6 @@ private struct CredentialsTab: View {
     @AppStorage("minimax.region") private var minimaxRegion = "international"
     @AppStorage("zai.region") private var zaiRegion = "international"
 
-    private let secrets = KeychainStore()
-
     var body: some View {
         Form {
             Section("MiniMax") {
@@ -120,9 +137,11 @@ private struct CredentialsTab: View {
                     Text("International (minimax.io)").tag("international")
                     Text("China (minimaxi.com)").tag("china")
                 }
-                SecureCredentialField(label: "API Key", account: "minimax.apiKey", secrets: secrets) {
-                    viewModel.refreshAll()
-                }
+                SecureField("API Key", text: $viewModel.credentials.minimaxKey)
+                    .onChange(of: viewModel.credentials.minimaxKey) { _ in
+                        viewModel.credentials.saveMinimax()
+                        viewModel.refreshAll()
+                    }
             }
 
             Section("Z.ai (GLM)") {
@@ -130,9 +149,11 @@ private struct CredentialsTab: View {
                     Text("International (z.ai)").tag("international")
                     Text("China (bigmodel.cn)").tag("china")
                 }
-                SecureCredentialField(label: "API Key", account: "zai.apiKey", secrets: secrets) {
-                    viewModel.refreshAll()
-                }
+                SecureField("API Key", text: $viewModel.credentials.zaiKey)
+                    .onChange(of: viewModel.credentials.zaiKey) { _ in
+                        viewModel.credentials.saveZai()
+                        viewModel.refreshAll()
+                    }
             }
 
             Section {
@@ -143,49 +164,5 @@ private struct CredentialsTab: View {
         }
         .formStyle(.grouped)
         .padding()
-    }
-}
-
-/// Backing store for a Keychain-backed field. ObservableObject is used
-/// instead of @State because the SwiftUI @State macro plugin is unavailable
-/// when building with Command Line Tools (no Xcode.app installed).
-private final class CredentialValue: ObservableObject {
-    var value: String = ""
-    var loaded = false
-}
-
-/// A SecureField bound to the Keychain. Loads on first appear, writes
-/// through on every change.
-private struct SecureCredentialField: View {
-    let label: String
-    let account: String
-    let secrets: KeychainStore
-    let onChange: () -> Void
-
-    @ObservedObject private var store = CredentialValue()
-
-    var body: some View {
-        SecureField(label, text: $store.value)
-            .task {
-                guard !store.loaded else { return }
-                store.value = secrets.get(account) ?? ""
-                store.loaded = true
-            }
-            .onChange(of: store.value) { newValue in
-                persist(newValue)
-            }
-    }
-
-    private func persist(_ newValue: String) {
-        do {
-            if newValue.isEmpty {
-                secrets.remove(account)
-            } else {
-                try secrets.set(newValue, for: account)
-            }
-            onChange()
-        } catch {
-            NSLog("[AIStat] failed to save \(account): \(error)")
-        }
     }
 }

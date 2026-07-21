@@ -20,7 +20,7 @@ public enum LoginItem {
             }
         } catch {
             // Surface in the run log; not fatal. Often happens for unsigned dev builds.
-            NSLog("[AIStat] login item toggle failed: \(error.localizedDescription)")
+            NSLog("[AIMonitor] login item toggle failed: \(error.localizedDescription)")
         }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Aggregate health of a provider as AIStat understands it.
+/// Aggregate health of a provider as AIMonitor understands it.
 /// Drives the colour of the menu bar dot and the card's status line.
 public enum QuotaState: String, Codable, Sendable {
     case healthy     // plenty of quota remaining

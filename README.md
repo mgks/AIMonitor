@@ -1,4 +1,4 @@
-# AIStat
+# AIMonitor
 
 A tiny native macOS menu bar app that shows the remaining usage, limits and health of every AI service you use. Think of it as Activity Monitor for AI quotas. No chat, no prompting, no playground. Just a glance at how much you have left.
 
@@ -8,15 +8,14 @@ A tiny native macOS menu bar app that shows the remaining usage, limits and heal
 
 ## What it does
 
-Click the menu bar icon and every configured provider shows a card: remaining percentage, a progress bar, reset countdown, and last-updated time. The menu bar icon itself is a coloured dot (green / yellow / red) plus the worst-case percentage across all providers.
+Click the menu bar icon and every enabled provider shows a card: remaining percentage, a progress bar, reset countdown, and last-updated time. The menu bar icon itself is the AIMonitor logo plus an optional usage summary percentage.
 
 ## Build
 
 Requires only the macOS Command Line Tools (no Xcode needed):
 
 ```bash
-make bundle    # compiles, renders the app icon, assembles AIStat.app
-open AIStat.app
+make deploy    # build, bundle, deploy to /Applications, launch
 ```
 
 For development:
@@ -25,15 +24,19 @@ For development:
 make build     # swift build (release)
 make run       # swift run (shows a dock icon, unlike the bundle)
 make icon      # render AppIcon.icns only
+make bundle    # assemble AIMonitor.app without deploying
 make clean     # remove build artefacts and the .app
 ```
 
-## Configure providers
+## Getting started
 
-Open **Preferences** from the menu bar (or `⌘,`):
+1. Launch AIMonitor. The menu bar icon appears top-right.
+2. Click it, then **Preferences**.
+3. **Providers** tab: toggle on the providers you use.
+4. **Credentials** tab: paste each API key. Keys are stored in the macOS Keychain, never synced.
+5. **General** tab: configure refresh interval, appearance, menu bar summary, notifications.
 
-1. **Credentials** tab: paste your API key for each provider. Keys are stored in the macOS Keychain, never synced, sent only to the provider you choose.
-2. Pick the **region** for providers that have separate international and China endpoints.
+Only providers that are both enabled and have credentials appear in the popover.
 
 ## Supported providers
 
@@ -42,12 +45,12 @@ Open **Preferences** from the menu bar (or `⌘,`):
 | **MiniMax** | `api.minimax.io` (international), `api.minimaxi.com` (China) | Coding Plan Remains API |
 | **Z.ai (GLM)** | `api.z.ai` (international), `open.bigmodel.cn` (China) | Quota Limit monitor API |
 
-More providers are added incrementally. Each is self-contained under `Sources/AIStat/Providers/<name>/`.
+More providers are added incrementally. Each is self-contained under `Sources/AIMonitor/Providers/<name>/`.
 
 ## Architecture
 
 ```
-Sources/AIStat/
+Sources/AIMonitor/
 ├── App/            SwiftUI shell: MenuBarExtra, cards, settings
 ├── Core/           Provider protocol, models, HTTP client, Keychain, scheduler
 ├── Providers/      One folder per provider, no cross-dependencies
@@ -56,13 +59,6 @@ Sources/AIStat/
 
 Every provider implements the `AIProvider` protocol: it owns how to fetch and parse its own quota data and returns a normalised `ProviderStatus`. No provider knows about another. Adding a provider is one new file plus one line in `ProviderRegistry`.
 
-The three-tier data abstraction:
-
-1. **Official API** (preferred) - e.g. MiniMax Coding Plan Remains, Z.ai Quota Limit.
-2. **Response headers** - infer remaining quota from rate-limit headers.
-3. **Authenticated scraping** (optional, future) - only when no API exists.
-
 ## License
 
 MIT. See `LICENSE`.
-
