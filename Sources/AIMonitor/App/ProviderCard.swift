@@ -73,23 +73,26 @@ struct ProviderCard: View {
         }
     }
 
-    /// Build the small grey lines under the bar: credits, remaining tokens,
-    /// reset countdown, last updated, latency.
+    /// Build the small grey lines under the bar: window reset countdowns,
+    /// last updated.
     private func detailLines(snapshot: QuotaSnapshot) -> [String] {
         var lines: [String] = []
-        if let credits = Formatting.credits(snapshot.creditsRemaining, currency: snapshot.currency ?? "USD") {
-            lines.append(credits + (snapshot.windowLabel.map { "  \u{00B7}  " + $0 } ?? ""))
-        } else if let window = snapshot.windowLabel {
+
+        // 5h / interval window reset.
+        if let reset = Formatting.countdown(to: snapshot.resetsAt) {
+            lines.append("5h resets in \(reset)")
+        }
+
+        // Weekly window reset (if present).
+        if let weekly = Formatting.countdown(to: snapshot.weeklyResetsAt) {
+            lines.append("Weekly resets in \(weekly)")
+        }
+
+        // Fall back to window label if no reset times.
+        if lines.isEmpty, let window = snapshot.windowLabel {
             lines.append(window)
         }
-        if let rem = Formatting.tokens(snapshot.remainingTokens), let total = Formatting.tokens(snapshot.totalTokens) {
-            lines.append("\(rem) / \(total) tokens")
-        } else if let rem = Formatting.tokens(snapshot.remainingTokens) {
-            lines.append("\(rem) tokens left")
-        }
-        if let reset = Formatting.countdown(to: snapshot.resetsAt) {
-            lines.append("Resets in \(reset)")
-        }
+
         if let last = status?.lastUpdated {
             lines.append("Updated " + Formatting.relativeShort(from: last))
         }

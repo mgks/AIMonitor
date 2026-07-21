@@ -138,6 +138,7 @@ final class MiniMaxProvider: AIProvider {
         let snapshot = QuotaSnapshot(
             remainingPercent: headline,
             resetsAt: dateFromMs(bucket.endTime),
+            weeklyResetsAt: weeklyActive ? dateFromMs(bucket.weeklyEndTime) : nil,
             windowLabel: windowLabel(hasWeekly: weeklyActive),
             rawHeaders: response.headers
         )
@@ -145,6 +146,7 @@ final class MiniMaxProvider: AIProvider {
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
+            shortName: "MiniMax",
             model: bucket.modelName ?? "general",
             state: QuotaThresholds.state(forPercent: headline),
             snapshot: snapshot,

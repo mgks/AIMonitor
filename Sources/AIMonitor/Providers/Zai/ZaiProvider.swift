@@ -109,30 +109,26 @@ final class ZaiProvider: AIProvider {
 
         // Headline: prefer tokens (the binding limit), fall back to time.
         let headline = tokensRemaining ?? timeRemainingPct
-        let reset = timeLimit?.nextResetTime ?? tokensLimit?.nextResetTime
+
+        // Two reset windows, matching the MiniMax card layout.
+        let intervalReset = dateFromMs(timeLimit?.nextResetTime)
+        let weeklyReset = dateFromMs(tokensLimit?.nextResetTime)
 
         var snapshot = QuotaSnapshot(
             remainingPercent: headline,
-            resetsAt: dateFromMs(reset),
+            resetsAt: intervalReset,
+            weeklyResetsAt: weeklyReset,
+            windowLabel: "5h + Weekly",
             rawHeaders: response.headers
         )
         if let rem = timeLimit?.remaining {
             snapshot.remainingRequests = rem
         }
-        if let pct = tokensLimit?.percentage {
-            // Record the used percentage in totalTokens for the card detail.
-            snapshot.windowLabel = "Tokens \(pct)% used"
-        } else if timeLimit != nil {
-            snapshot.windowLabel = "5h session"
-        }
-        if let level = envelope.data?.level {
-            snapshot.currency = nil   // level is plan tier, not currency
-            _ = level
-        }
 
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
+            shortName: "Z.ai",
             model: envelope.data?.level,
             state: QuotaThresholds.state(forPercent: headline),
             snapshot: snapshot,

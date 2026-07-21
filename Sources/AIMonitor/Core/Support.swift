@@ -27,7 +27,8 @@ public enum LoginItem {
 
 /// Opens the Settings window. The selector name changed between macOS 13 and 14.
 /// Also re-activates the app so the window comes to the front even after the
-/// popover dismissed it.
+/// popover dismissed it, and makes the window float on top (sticky) until
+/// the user closes it.
 public enum SettingsOpener {
     @MainActor
     public static func open() {
@@ -52,6 +53,7 @@ public enum SettingsOpener {
             for window in NSApp.windows where window.title.contains("Settings")
                 || window.title.contains("Preferences")
                 || window.frameAutosaveName.contains("Settings") {
+                window.level = .floating   // sticky: stays above other windows
                 window.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
             }

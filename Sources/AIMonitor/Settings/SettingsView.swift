@@ -84,6 +84,7 @@ private struct GeneralTab: View {
 
 private struct ProvidersTab: View {
     @ObservedObject var viewModel: AppViewModel
+    @AppStorage(AppSettings.Keys.showSummary) private var showSummary = false
 
     var body: some View {
         Form {
@@ -94,7 +95,6 @@ private struct ProvidersTab: View {
                         get: { isOn },
                         set: { newValue in
                             viewModel.setProviderEnabled(provider.id, newValue)
-                            if newValue { viewModel.refreshAll() }
                         }
                     )) {
                         HStack {
@@ -108,6 +108,21 @@ private struct ProvidersTab: View {
                                         .foregroundStyle(.orange)
                                 }
                             }
+                        }
+                    }
+
+                    // Per-provider summary toggle, shown when summary is on.
+                    if showSummary && isOn {
+                        Toggle(isOn: Binding(
+                            get: { viewModel.isProviderInSummary(provider.id) },
+                            set: { newValue in
+                                viewModel.setProviderInSummary(provider.id, newValue)
+                            }
+                        )) {
+                            Text("Show in menu bar summary")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 20)
                         }
                     }
                 }

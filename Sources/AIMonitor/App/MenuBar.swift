@@ -56,11 +56,27 @@ struct MenuBarLabel: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(nsImage: MonitorMenuBarIcon.image)
-            if showSummary, let pct = viewModel.summaryPercent {
-                Text(Formatting.percent(pct) ?? "")
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
+            if showSummary {
+                // Render one short segment per summary-enabled provider.
+                ForEach(viewModel.summaryRows) { row in
+                    Text("\(row.shortName) \(Formatting.percent(row.percent) ?? "")")
+                        .font(.system(size: 11, weight: .medium))
+                        .monospacedDigit()
+                        .foregroundStyle(colour(for: row.state))
+                    Divider()
+                        .frame(height: 10)
+                        .opacity(0.4)
+                }
             }
+        }
+    }
+
+    private func colour(for state: QuotaState) -> Color {
+        switch state {
+        case .healthy: return .primary
+        case .warning: return .yellow
+        case .critical, .exhausted, .error: return .red
+        case .unknown: return .secondary
         }
     }
 }

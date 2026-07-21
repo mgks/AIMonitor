@@ -156,6 +156,54 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Summary
 
+    /// Providers opted into the menu bar summary. Stored as a comma list.
+    private static let summaryKey = "summaryProviders"
+
+    var summaryProviders: Set<String> {
+        let raw = UserDefaults.standard.string(forKey: Self.summaryKey) ?? ""
+        return Set(raw.split(separator: ",").map(String.init))
+    }
+
+    func isProviderInSummary(_ id: String) -> Bool {
+        // Default: all active providers show in summary.
+        if UserDefaults.standard.object(forKey: Self.summaryKey) == nil {
+            return isProviderActive(id)
+        }
+        return summaryProviders.contains(id)
+    }
+
+    func setProviderInSummary(_ id: String, _ on: Bool) {
+        var set = summaryProviders
+        if on { set.insert(id) } else { set.remove(id) }
+        UserDefaults.standard.set(set.sorted().joined(separator: ","), forKey: Self.summaryKey)
+        objectWillChange.send()
+    }
+
+    /// Summary rows for the menu bar label: short name + percent for each
+    /// active provider opted into the summary.
+    struct SummaryRow: Identifiable {
+        let id: String
+        let shortName: String
+        let percent: Double
+        let state: QuotaState
+    }
+
+    var summaryRows: [SummaryRow] {
+        let showUsed = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryMode) ?? "remaining" == "used"
+        return activeProviders.filter { isProviderInSummary($0.id) }.compactMap { provider in
+            guard let pct = statuses[provider.id]?.snapshot.remainingPercent else { return nil }
+            let displayed = showUsed ? 100 - pct : pct
+            let name = statuses[provider.id]?.shortName ?? provider.displayName
+            return SummaryRow(
+                id: provider.id,
+                shortName: name,
+                percent: displayed,
+                state: QuotaThresholds.state(forPercent: pct)
+            )
+        }
+    }
+
+    /// Legacy single headline percent (worst case), kept for compatibility.
     public var summaryPercent: Double? {
         let pcts = activeProviders.compactMap { statuses[$0.id]?.snapshot.remainingPercent }
         guard !pcts.isEmpty else { return nil }

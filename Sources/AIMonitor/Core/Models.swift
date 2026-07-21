@@ -32,7 +32,8 @@ public struct QuotaSnapshot: Codable, Sendable, Equatable {
     public var totalTokens: Int?
     public var creditsRemaining: Double?      // account balance in provider currency
     public var currency: String?              // ISO code, e.g. "USD"
-    public var resetsAt: Date?
+    public var resetsAt: Date?                // 5h / interval window reset
+    public var weeklyResetsAt: Date?          // weekly window reset (if any)
     public var windowLabel: String?           // "5h window", "Weekly", "120 RPM"
     public var rawHeaders: [String: String]   // captured rate-limit headers for debugging
 
@@ -45,6 +46,7 @@ public struct QuotaSnapshot: Codable, Sendable, Equatable {
         creditsRemaining: Double? = nil,
         currency: String? = nil,
         resetsAt: Date? = nil,
+        weeklyResetsAt: Date? = nil,
         windowLabel: String? = nil,
         rawHeaders: [String: String] = [:]
     ) {
@@ -133,6 +135,7 @@ public struct QuotaSnapshot: Codable, Sendable, Equatable {
 public struct ProviderStatus: Codable, Sendable, Equatable {
     public var providerID: String
     public var displayName: String
+    public var shortName: String             // compact label for menu bar summary
     public var model: String?
     public var state: QuotaState
     public var snapshot: QuotaSnapshot
@@ -143,6 +146,7 @@ public struct ProviderStatus: Codable, Sendable, Equatable {
     public init(
         providerID: String,
         displayName: String,
+        shortName: String = "",
         model: String? = nil,
         state: QuotaState = .unknown,
         snapshot: QuotaSnapshot = QuotaSnapshot(),
@@ -152,6 +156,7 @@ public struct ProviderStatus: Codable, Sendable, Equatable {
     ) {
         self.providerID = providerID
         self.displayName = displayName
+        self.shortName = shortName.isEmpty ? displayName : shortName
         self.model = model
         self.state = state
         self.snapshot = snapshot
