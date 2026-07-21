@@ -1,42 +1,44 @@
 import SwiftUI
+import AppKit
 
-/// The monitor logo drawn as a vector shape in SwiftUI Canvas.
-/// Matches the AppIcon design: rounded rect outline + magenta graph bump.
-struct MonitorIconShape: View {
-    var size: CGFloat = 18
+/// Renders the monitor logo as a template NSImage, the only reliable way to
+/// show a custom shape in a MenuBarExtra label. Template images adapt their
+/// colour to the menu bar (light/dark) automatically.
+enum MonitorMenuBarIcon {
+    static let image: NSImage = {
+        let size: CGFloat = 32    // render at 2x for the ~16pt menu bar
+        let img = NSImage(size: NSSize(width: size, height: size))
+        img.lockFocus()
 
-    var body: some View {
-        Canvas { ctx, sz in
-            let w = sz.width
-            let h = sz.height
+        let inset: CGFloat = size * 0.12
+        let rect = NSRect(x: inset, y: inset,
+                          width: size - 2 * inset, height: size - 2 * inset)
+        let path = NSBezierPath(roundedRect: rect, xRadius: size * 0.18, yRadius: size * 0.18)
+        path.lineWidth = size * 0.075
+        path.lineJoinStyle = .round
+        path.stroke()
 
-            // Outer rounded rect (monitor frame).
-            let inset = w * 0.12
-            let rect = CGRect(x: inset, y: inset,
-                              width: w - 2 * inset, height: h - 2 * inset)
-            let frame = Path(roundedRect: rect, cornerRadius: w * 0.18)
-            ctx.stroke(frame, with: .color(.primary), lineWidth: w * 0.075)
+        // Graph bump inside the frame.
+        let bump = NSBezierPath()
+        let baseY = size * 0.58
+        let peakY = size * 0.35
+        bump.move(to: NSPoint(x: size * 0.28, y: baseY))
+        bump.line(to: NSPoint(x: size * 0.36, y: baseY))
+        bump.curve(to: NSPoint(x: size * 0.5, y: peakY),
+                   controlPoint1: NSPoint(x: size * 0.42, y: baseY),
+                   controlPoint2: NSPoint(x: size * 0.42, y: baseY))
+        bump.curve(to: NSPoint(x: size * 0.64, y: baseY),
+                   controlPoint1: NSPoint(x: size * 0.58, y: peakY),
+                   controlPoint2: NSPoint(x: size * 0.58, y: peakY))
+        bump.line(to: NSPoint(x: size * 0.72, y: baseY))
+        bump.lineWidth = size * 0.075
+        bump.lineCapStyle = .round
+        bump.stroke()
 
-            // Graph line: bump shape going up in the middle.
-            var line = Path()
-            let baseY = h * 0.58
-            let peakY = h * 0.35
-            line.move(to: CGPoint(x: w * 0.28, y: baseY))
-            line.addLine(to: CGPoint(x: w * 0.36, y: baseY))
-            line.addQuadCurve(
-                to: CGPoint(x: w * 0.5, y: peakY),
-                control: CGPoint(x: w * 0.42, y: baseY - h * 0.02)
-            )
-            line.addQuadCurve(
-                to: CGPoint(x: w * 0.64, y: baseY),
-                control: CGPoint(x: w * 0.58, y: peakY + h * 0.02)
-            )
-            line.addLine(to: CGPoint(x: w * 0.72, y: baseY))
-            ctx.stroke(line, with: .color(Color(red: 0.875, green: 0.078, blue: 0.388)),
-                       lineWidth: w * 0.075)
-        }
-        .frame(width: size, height: size)
-    }
+        img.unlockFocus()
+        img.isTemplate = true    // adaptive colour for light/dark menu bar
+        return img
+    }()
 }
 
 /// The menu bar icon: monitor logo plus optional stat summary.
@@ -46,7 +48,7 @@ struct MenuBarLabel: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            MonitorIconShape(size: 16)
+            Image(nsImage: MonitorMenuBarIcon.image)
             if showSummary, let pct = viewModel.summaryPercent {
                 Text(Formatting.percent(pct) ?? "")
                     .font(.system(size: 11, weight: .medium))
@@ -90,7 +92,7 @@ struct MenuBarContent: View {
 
     private var header: some View {
         HStack {
-            MonitorIconShape(size: 14)
+            Image(nsImage: MonitorMenuBarIcon.image)
             Text("AIMonitor")
                 .font(.headline)
             Spacer()
