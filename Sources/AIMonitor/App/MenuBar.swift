@@ -6,37 +6,44 @@ import AppKit
 /// colour to the menu bar (light/dark) automatically.
 enum MonitorMenuBarIcon {
     static let image: NSImage = {
-        let size: CGFloat = 32    // render at 2x for the ~16pt menu bar
-        let img = NSImage(size: NSSize(width: size, height: size))
+        // Menu bar icons should be roughly 18pt; render at 2x for retina.
+        let renderSize: CGFloat = 36
+        let displaySize: CGFloat = 18
+        let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
 
-        let inset: CGFloat = size * 0.12
+        let s = renderSize
+        let lw = s * 0.038    // thin stroke (was 0.075)
+
+        // Rounded rect outline with generous padding.
+        let inset = s * 0.19
         let rect = NSRect(x: inset, y: inset,
-                          width: size - 2 * inset, height: size - 2 * inset)
-        let path = NSBezierPath(roundedRect: rect, xRadius: size * 0.18, yRadius: size * 0.18)
-        path.lineWidth = size * 0.075
+                          width: s - 2 * inset, height: s - 2 * inset)
+        let path = NSBezierPath(roundedRect: rect, xRadius: s * 0.14, yRadius: s * 0.14)
+        path.lineWidth = lw
         path.lineJoinStyle = .round
         path.stroke()
 
         // Graph bump inside the frame.
         let bump = NSBezierPath()
-        let baseY = size * 0.58
-        let peakY = size * 0.35
-        bump.move(to: NSPoint(x: size * 0.28, y: baseY))
-        bump.line(to: NSPoint(x: size * 0.36, y: baseY))
-        bump.curve(to: NSPoint(x: size * 0.5, y: peakY),
-                   controlPoint1: NSPoint(x: size * 0.42, y: baseY),
-                   controlPoint2: NSPoint(x: size * 0.42, y: baseY))
-        bump.curve(to: NSPoint(x: size * 0.64, y: baseY),
-                   controlPoint1: NSPoint(x: size * 0.58, y: peakY),
-                   controlPoint2: NSPoint(x: size * 0.58, y: peakY))
-        bump.line(to: NSPoint(x: size * 0.72, y: baseY))
-        bump.lineWidth = size * 0.075
+        let baseY = s * 0.57
+        let peakY = s * 0.38
+        bump.move(to: NSPoint(x: s * 0.32, y: baseY))
+        bump.line(to: NSPoint(x: s * 0.38, y: baseY))
+        bump.curve(to: NSPoint(x: s * 0.5, y: peakY),
+                   controlPoint1: NSPoint(x: s * 0.44, y: baseY),
+                   controlPoint2: NSPoint(x: s * 0.44, y: baseY))
+        bump.curve(to: NSPoint(x: s * 0.62, y: baseY),
+                   controlPoint1: NSPoint(x: s * 0.56, y: peakY),
+                   controlPoint2: NSPoint(x: s * 0.56, y: peakY))
+        bump.line(to: NSPoint(x: s * 0.68, y: baseY))
+        bump.lineWidth = lw
         bump.lineCapStyle = .round
         bump.stroke()
 
         img.unlockFocus()
         img.isTemplate = true    // adaptive colour for light/dark menu bar
+        img.size = NSSize(width: displaySize, height: displaySize)
         return img
     }()
 }
@@ -66,7 +73,7 @@ struct MenuBarContent: View {
         VStack(alignment: .leading, spacing: 0) {
             header
 
-            Divider().padding(.vertical, 6)
+            Divider().padding(.vertical, 4)
 
             if viewModel.hasActiveProviders {
                 ForEach(viewModel.activeProviders, id: \.id) { provider in
@@ -75,36 +82,39 @@ struct MenuBarContent: View {
                         status: viewModel.statuses[provider.id],
                         error: viewModel.errors[provider.id]
                     )
-                    Divider().padding(.vertical, 6)
+                    Divider().padding(.vertical, 4)
                 }
             } else {
                 emptyState
-                Divider().padding(.vertical, 6)
+                Divider().padding(.vertical, 4)
             }
 
             footer
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 4)
         .frame(width: 280)
     }
 
     private var header: some View {
-        HStack {
-            Image(nsImage: MonitorMenuBarIcon.image)
+        HStack(spacing: 6) {
+            Image(systemName: "chart.bar.horizontal.axis")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
             Text("AIMonitor")
-                .font(.headline)
+                .font(.system(size: 12, weight: .semibold))
             Spacer()
             if viewModel.isRefreshing {
                 ProgressView()
                     .controlSize(.small)
             } else if let last = viewModel.lastRefresh {
                 Text(Formatting.relativeShort(from: last))
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
             }
         }
+        .padding(.vertical, 2)
     }
 
     private var emptyState: some View {

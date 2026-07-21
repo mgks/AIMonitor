@@ -83,7 +83,12 @@ final class AppViewModel: ObservableObject {
     }
 
     func isProviderEnabled(_ id: String) -> Bool {
-        UserDefaults.standard.bool(forKey: "enabled.\(id)")
+        // Default ON for any provider that has credentials entered, so the user
+        // does not need to manually toggle after adding a key.
+        if UserDefaults.standard.object(forKey: "enabled.") == nil {
+            return credentials.isConfigured(id)
+        }
+        return UserDefaults.standard.bool(forKey: "enabled.")
     }
 
     func setProviderEnabled(_ id: String, _ on: Bool) {
