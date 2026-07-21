@@ -140,7 +140,7 @@ private struct CredentialsTab: View {
                 SecureField("API Key", text: $viewModel.credentials.minimaxKey)
                     .onChange(of: viewModel.credentials.minimaxKey) { _ in
                         viewModel.credentials.saveMinimax()
-                        viewModel.refreshAll()
+                        viewModel.credentialsDidChange()
                     }
             }
 
@@ -152,7 +152,7 @@ private struct CredentialsTab: View {
                 SecureField("API Key", text: $viewModel.credentials.zaiKey)
                     .onChange(of: viewModel.credentials.zaiKey) { _ in
                         viewModel.credentials.saveZai()
-                        viewModel.refreshAll()
+                        viewModel.credentialsDidChange()
                     }
             }
 

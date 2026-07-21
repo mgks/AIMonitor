@@ -17,13 +17,19 @@ final class CredentialsStore: ObservableObject {
     }
 
     func saveMinimax() {
-        if minimaxKey.isEmpty { secrets.remove("minimax.apiKey") }
-        else { try? secrets.set(minimaxKey, for: "minimax.apiKey") }
+        if minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty {
+            secrets.remove("minimax.apiKey")
+        } else {
+            try? secrets.set(minimaxKey, for: "minimax.apiKey")
+        }
     }
 
     func saveZai() {
-        if zaiKey.isEmpty { secrets.remove("zai.apiKey") }
-        else { try? secrets.set(zaiKey, for: "zai.apiKey") }
+        if zaiKey.trimmingCharacters(in: .whitespaces).isEmpty {
+            secrets.remove("zai.apiKey")
+        } else {
+            try? secrets.set(zaiKey, for: "zai.apiKey")
+        }
     }
 
     var minimaxConfigured: Bool { !minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -41,6 +47,13 @@ final class CredentialsStore: ObservableObject {
 /// Owns provider state, drives refresh, and exposes everything the UI binds to.
 @MainActor
 final class AppViewModel: ObservableObject {
+
+    /// Called by CredentialsStore after a key is saved. Triggers a refresh
+    /// so newly-configured providers appear immediately.
+    func credentialsDidChange() {
+        objectWillChange.send()
+        refreshAll()
+    }
 
     @Published public private(set) var statuses: [String: ProviderStatus] = [:]
     @Published public private(set) var errors: [String: String] = [:]
@@ -82,17 +95,34 @@ final class AppViewModel: ObservableObject {
         !activeProviders.isEmpty
     }
 
-    func isProviderEnabled(_ id: String) -> Bool {
-        // Default ON for any provider that has credentials entered, so the user
-        // does not need to manually toggle after adding a key.
-        if UserDefaults.standard.object(forKey: "enabled.") == nil {
-            return credentials.isConfigured(id)
+    private static let enabledKey = "enabledProviders"
+
+    private var enabledOverrides: [String: Bool] {
+        let raw = UserDefaults.standard.string(forKey: Self.enabledKey) ?? ""
+        var dict: [String: Bool] = [:]
+        for pair in raw.split(separator: ",") {
+            let parts = pair.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2 else { continue }
+            dict[String(parts[0])] = parts[1] == "1"
         }
-        return UserDefaults.standard.bool(forKey: "enabled.")
+        return dict
+    }
+
+    func isProviderEnabled(_ id: String) -> Bool {
+        // If the user has explicitly toggled this provider, honour that.
+        // Otherwise default ON whenever a key is present, so adding a key
+        // in Credentials immediately activates the provider.
+        if let override = enabledOverrides[id] { return override }
+        return credentials.isConfigured(id)
     }
 
     func setProviderEnabled(_ id: String, _ on: Bool) {
-        UserDefaults.standard.set(on, forKey: "enabled.\(id)")
+        var overrides = enabledOverrides
+        overrides[id] = on
+        let raw = overrides.sorted { $0.key < $1.key }
+            .map { "\($0.key):\($0.value ? "1" : "0")" }
+            .joined(separator: ",")
+        UserDefaults.standard.set(raw, forKey: Self.enabledKey)
         objectWillChange.send()
     }
 

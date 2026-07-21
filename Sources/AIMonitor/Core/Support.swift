@@ -26,15 +26,36 @@ public enum LoginItem {
 }
 
 /// Opens the Settings window. The selector name changed between macOS 13 and 14.
+/// Also re-activates the app so the window comes to the front even after the
+/// popover dismissed it.
 public enum SettingsOpener {
     @MainActor
     public static func open() {
+        NSApp.activate(ignoringOtherApps: true)
         if #available(macOS 14, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            // Try the new selector first; fall back to the 13.0 one.
+            if NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil) {
+                bringSettingsToFront()
+                return
+            }
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         } else {
             NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         }
-        NSApp.activate(ignoringOtherApps: true)
+        bringSettingsToFront()
+    }
+
+    @MainActor
+    private static func bringSettingsToFront() {
+        // Defer so the window exists by the time we search for it.
+        DispatchQueue.main.async {
+            for window in NSApp.windows where window.title.contains("Settings")
+                || window.title.contains("Preferences")
+                || window.frameAutosaveName.contains("Settings") {
+                window.makeKeyAndOrderFront(nil)
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
     }
 }
 

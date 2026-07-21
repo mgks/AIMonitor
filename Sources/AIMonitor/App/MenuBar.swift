@@ -13,7 +13,7 @@ enum MonitorMenuBarIcon {
         img.lockFocus()
 
         let s = renderSize
-        let lw = s * 0.052    // ~1pt at display size, visible but not heavy
+        let lw = s * 0.058    // slightly heavier for better visibility
 
         // Rounded rect outline. Fill ~73% of frame like native icons.
         let inset = s * 0.135
