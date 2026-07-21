@@ -25,10 +25,11 @@ struct AIMonitorApp: App {
 }
 
 /// Handles lifecycle hooks SwiftUI does not expose directly.
-/// Applies the appearance preference and the accessory activation policy.
+/// Applies the appearance preference only. The accessory activation policy
+/// is handled by LSUIElement=true in Info.plist; calling setActivationPolicy
+/// here would destroy the MenuBarExtra status item that SwiftUI just created.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
         AppearanceManager.apply()
     }
 }
