@@ -45,10 +45,12 @@ guard let glyphImage = NSImage(contentsOf: svgURL) else {
 
 for spec in sizes {
     let pixels = spec.pixels
+    // Render at 4x then downscale for clean anti-aliased edges, no halos.
+    let renderRes = pixels * 4
     guard let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil,
-        pixelsWide: pixels,
-        pixelsHigh: pixels,
+        pixelsWide: renderRes,
+        pixelsHigh: renderRes,
         bitsPerSample: 8,
         samplesPerPixel: 4,
         hasAlpha: true,
@@ -60,27 +62,51 @@ for spec in sizes {
         FileHandle.standardError.write("bitmap rep failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
-    rep.size = NSSize(width: pixels, height: pixels)
+    rep.size = NSSize(width: renderRes, height: renderRes)
 
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+    NSGraphicsContext.current?.imageInterpolation = .none
 
-    // Light-blue rounded rect background (#caf0fe).
-    let cornerR = CGFloat(pixels) * 0.225
-    let bgPath = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: pixels, height: pixels),
+    // Flat light-blue rounded rect background. No gradient, no shadow.
+    let cornerR = CGFloat(renderRes) * 0.225
+    let bgPath = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: renderRes, height: renderRes),
                               xRadius: cornerR, yRadius: cornerR)
     NSColor(red: 0.792, green: 0.941, blue: 0.996, alpha: 1).setFill()
     bgPath.fill()
 
-    // Draw the glyph SVG centered, filling ~85% of the icon.
-    let inset = CGFloat(pixels) * 0.075
-    glyphImage.draw(in: NSRect(x: inset, y: inset, width: CGFloat(pixels) - 2 * inset,
-                               height: CGFloat(pixels) - 2 * inset),
+    // Draw the glyph SVG centered at 85% of the icon.
+    let inset = CGFloat(renderRes) * 0.075
+    glyphImage.draw(in: NSRect(x: inset, y: inset,
+                               width: CGFloat(renderRes) - 2 * inset,
+                               height: CGFloat(renderRes) - 2 * inset),
                     from: .zero, operation: .sourceOver, fraction: 1.0)
-
     NSGraphicsContext.restoreGraphicsState()
 
-    guard let png = rep.representation(using: .png, properties: [:]) else {
+    // Downscale to target resolution with high quality interpolation.
+    guard let downscaled = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels,
+        pixelsHigh: pixels,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else {
+        FileHandle.standardError.write("downscale failed for \(spec.name)\n".data(using: .utf8)!)
+        exit(1)
+    }
+    downscaled.size = NSSize(width: pixels, height: pixels)
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: downscaled)
+    NSGraphicsContext.current?.imageInterpolation = .high
+    rep.draw(in: NSRect(x: 0, y: 0, width: pixels, height: pixels))
+    NSGraphicsContext.restoreGraphicsState()
+
+    guard let png = downscaled.representation(using: .png, properties: [:]) else {
         FileHandle.standardError.write("png encode failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }

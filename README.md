@@ -1,91 +1,115 @@
+<div align="center">
+
+<!-- TODO: Replace with a real screenshot of the menu bar popover -->
+<!-- <img src="screenshot.png" width="320" alt="AIMonitor popover"> -->
+
 # AIMonitor
 
-A tiny native macOS menu bar app that shows the remaining usage, limits and health of every AI service you use. Think of it as Activity Monitor for AI quotas. No chat, no prompting, no playground. Just a glance at how much you have left.
+Monitor AI service quotas from your menu bar.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)
-![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)
-![MIT](https://img.shields.io/badge/License-MIT-green)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://github.com/mgks/AIQuota)
+[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)](https://github.com/mgks/AIQuota)
+[![MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-## What it does
+</div>
 
-Click the menu bar icon and every enabled provider shows a card: remaining percentage, a progress bar, reset countdown, and last-updated time. The menu bar icon itself is the AIMonitor logo plus an optional usage summary percentage.
+---
 
-## Build
+A tiny native macOS menu bar app that shows the remaining usage, limits, and health of every AI service you use.
 
-Requires only the macOS Command Line Tools (no Xcode needed):
+No chat. No prompting. No playground. Just a glance at how much you have left.
+
+## Features
+
+- **Menu bar glance**: icon + optional usage percentage for one selected provider
+- **Dual-window cards**: each provider shows both 5-hour and weekly quota with progress bars
+- **Auto-refresh**: every 60 seconds (configurable), fetches on launch
+- **Notifications**: alerts when quota drops below 20%, 10%, exhausted, or resets
+- **7 providers**: Claude Code, Codex, Kimi, MiniMax, Z.ai (GLM), DeepSeek, OpenRouter
+- **Region switching**: MiniMax and Z.ai support international and China endpoints
+- **Zero keychain prompts**: credentials stored in a local file, not the macOS Keychain
+- **Open source**: MIT, no analytics, no backend
+
+## Installation
+
+<!-- TODO: Add download link once a release is published -->
+<!-- Download the latest `.dmg` from [Releases](https://github.com/mgks/AIQuota/releases) -->
+
+### Build from source
+
+Requires macOS 13+ and the Command Line Tools (no Xcode needed):
 
 ```bash
-make deploy    # build, bundle, deploy to /Applications, launch
+git clone https://github.com/mgks/AIQuota.git
+cd AIQuota/AIMonitor
+make deploy
 ```
 
-For development:
-
-```bash
-make build     # swift build (release)
-make run       # swift run (shows a dock icon, unlike the bundle)
-make icon      # render AppIcon.icns only
-make bundle    # assemble AIMonitor.app without deploying
-make clean     # remove build artefacts and the .app
-```
+`make deploy` builds the app, renders the icon, assembles the `.app` bundle, copies it to `/Applications`, and launches it.
 
 ## Getting started
 
-1. Launch AIMonitor. The menu bar icon appears top-right.
-2. Click it, then **Preferences**.
-3. **Providers** tab: toggle on the providers you use.
-4. **Credentials** tab: paste each API key. Keys are stored in the macOS Keychain, never synced.
-5. **General** tab: configure refresh interval, appearance, menu bar summary, notifications.
+1. Launch AIMonitor. A gauge icon appears in your menu bar.
+2. Click the icon, then **Preferences**.
+3. Go to the **Providers** tab. Toggle on the providers you use. Each provider expands to show its API key field or OAuth setup instructions.
+4. Paste your API keys directly in the expanded fields.
+5. In **General**, configure refresh interval, appearance, menu bar summary, and notifications.
 
-Only providers that are both enabled and have credentials appear in the popover.
+Only enabled providers with keys appear in the popover. Keys are stored locally and never leave your machine.
 
 ## Supported providers
 
-### OAuth providers (auto-login via CLI tools)
+### OAuth providers (no manual key needed)
 
-These providers authenticate via their official CLI tools. Run the login command once, then enable the provider in Preferences. No manual API key entry needed.
+Log in with the official CLI tool once, then toggle the provider on. AIMonitor reads the credentials automatically and refreshes expired tokens.
 
-| Provider | CLI login command | Credential location | Data source |
-|---|---|---|---|
-| **Claude Code** | `claude` | `~/.claude/.credentials.json` or macOS Keychain `Claude Code-credentials` | `api.anthropic.com/api/oauth/usage` |
-| **Codex (OpenAI)** | `codex login` | `~/.codex/auth.json` | `chatgpt.com/backend-api/wham/usage` |
+| Provider | Setup | What you see |
+|---|---|---|
+| **Claude Code** | `npm i -g @anthropic-ai/claude-code && claude` | 5h + 7-day windows, plan tier |
+| **Codex (OpenAI)** | `npm i -g @openai/codex && codex login` | 5h + 7-day windows |
 
-Tokens auto-refresh when expired. The credentials are read-only; AIMonitor never modifies them.
+### API-key providers
 
-### API-key providers (enter key in Preferences)
+Paste your key in the Providers tab. Supports international and China endpoints where applicable.
 
-| Provider | Endpoints | Region options | Data source |
-|---|---|---|---|
-| **Kimi** | `api.kimi.com` | International only | Coding plan usage (`/coding/v1/usages`) |
-| **MiniMax** | `api.minimax.io`, `api.minimaxi.com` | International or China | Coding Plan Remains API |
-| **Z.ai (GLM)** | `api.z.ai`, `open.bigmodel.cn` | International or China | Quota Limit monitor API |
-| **DeepSeek** | `api.deepseek.com` | International only | Account balance |
-| **OpenRouter** | `openrouter.ai` | International only | Credit balance + usage |
+| Provider | Region options | What you see |
+|---|---|---|
+| **Kimi** | International | 5h + Weekly coding plan quota |
+| **MiniMax** | International / China | 5h + Weekly Coding Plan quota |
+| **Z.ai (GLM)** | International / China | 5h + Weekly Coding Plan quota |
+| **DeepSeek** | International | Account balance (USD/CNY) |
+| **OpenRouter** | International | Credit balance + usage |
 
-API keys are stored in the macOS Keychain (service `dev.mgks.aimonitor`), never written to disk or synced.
+## Screenshots
 
-## Prerequisites for OAuth providers
+<!-- TODO: Add these screenshots before publishing -->
+<!-- 1. Menu bar popover with provider cards (screenshot-popover.png) -->
+<!-- 2. Preferences > Providers tab with expanded fields (screenshot-providers.png) -->
+<!-- 3. Menu bar icon with summary percentage (screenshot-menubar.png) -->
 
-To use Claude Code and Codex providers, you need their CLI tools installed and authenticated:
+## For developers
+
+<details>
+<summary>Build & architecture</summary>
+
+### Build commands
 
 ```bash
-# Claude Code (Anthropic)
-npm install -g @anthropic-ai/claude-code
-claude              # follow the login flow
-
-# Codex (OpenAI)
-npm install -g @openai/codex
-codex login         # follow the login flow
+make build     # swift build (release)
+make run       # swift run (shows dock icon)
+make icon      # render AppIcon.icns
+make bundle    # assemble .app without deploying
+make deploy    # build + deploy to /Applications + launch
+make clean     # remove build artifacts
 ```
 
-After login, the credentials are written to disk. AIMonitor reads them automatically.
-
-## Architecture
+### Architecture
 
 ```
 Sources/AIMonitor/
 ├── App/            SwiftUI shell: MenuBarExtra, cards, settings
-├── Core/           Provider protocol, models, HTTP client, Keychain, scheduler,
-│                   OAuth credentials reader
+├── Core/           Provider protocol, models, HTTP client, credential store,
+│                   OAuth reader, scheduler, notifications
 ├── Providers/      One folder per provider, no cross-dependencies:
 │   ├── Claude/     OAuth, auto-refresh, usage endpoint
 │   ├── Codex/      OAuth, auto-refresh, usage endpoint
@@ -94,22 +118,28 @@ Sources/AIMonitor/
 │   ├── Zai/        API key, quota limit (no Bearer prefix)
 │   ├── DeepSeek/   API key, account balance
 │   └── OpenRouter/ API key, credit balance
-└── Settings/       Preferences window
+└── Settings/       Preferences window (General, Providers, About)
 ```
 
-Every provider implements the `AIProvider` protocol: it owns how to fetch and parse its own quota data and returns a normalised `ProviderStatus`. No provider knows about another. Adding a provider is one new file plus one line in `ProviderRegistry`.
+Each provider implements `AIProvider.fetchStatus(apiKey:)`. The view model passes keys in-memory from a local file store. No keychain access during refresh.
 
-The three-tier data abstraction:
-
-1. **Official API** (preferred) - e.g. MiniMax Coding Plan, Z.ai Quota Limit.
-2. **OAuth usage endpoint** - Claude Code, Codex read quota via undocumented usage endpoints.
-3. **Account balance** - DeepSeek, OpenRouter show credit balance when no quota window exists.
-
-## Adding a new provider
+### Adding a new provider
 
 1. Create `Sources/AIMonitor/Providers/YourProvider/YourProvider.swift`.
 2. Implement `AIProvider` (fetch + parse + return `ProviderStatus`).
 3. Add it to `ProviderRegistry.makeDefault()`.
-4. Add credential fields in `SettingsView.swift`.
+4. Add config fields in `SettingsView.swift` Providers tab.
 
-For OAuth providers, define a `CredentialSchema` and use `OAuthReader.load()`.
+</details>
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+[mgks.dev](https://mgks.dev)
+
+</div>

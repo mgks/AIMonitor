@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UserNotifications
 
 @main
 struct AIMonitorApp: App {
@@ -25,12 +26,22 @@ struct AIMonitorApp: App {
 }
 
 /// Handles lifecycle hooks SwiftUI does not expose directly.
-/// Applies the appearance preference only. The accessory activation policy
-/// is handled by LSUIElement=true in Info.plist; calling setActivationPolicy
-/// here would destroy the MenuBarExtra status item that SwiftUI just created.
-final class AppDelegate: NSObject, NSApplicationDelegate {
+/// Registers the app as a notification delegate so alerts appear even for
+/// unsigned menu-bar apps, and applies the appearance preference.
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppearanceManager.apply()
+        // Set the notification delegate so alerts fire even without a signing identity.
+        UNUserNotificationCenter.current().delegate = self
+    }
+
+    /// Show notifications even when the app is in the foreground.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
 

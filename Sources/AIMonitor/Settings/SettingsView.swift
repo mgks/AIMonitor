@@ -89,7 +89,6 @@ private struct GeneralTab: View {
                 Button("Enable Notifications\u{2026}") {
                     viewModel.requestNotificationPermission()
                 }
-                .font(.caption)
             }
         }
         .formStyle(.grouped)
@@ -106,8 +105,10 @@ private struct ProvidersTab: View {
 
     var body: some View {
         Form {
-            ForEach(viewModel.providers, id: \.id) { provider in
-                providerSection(provider)
+            Section("Providers") {
+                ForEach(viewModel.providers, id: \.id) { provider in
+                    providerSection(provider)
+                }
             }
         }
         .formStyle(.grouped)
@@ -119,29 +120,25 @@ private struct ProvidersTab: View {
         let isOn = viewModel.isProviderEnabled(provider.id)
         let configured = viewModel.isProviderConfigured(provider.id)
 
-        Section {
-            Toggle(isOn: Binding(
-                get: { isOn },
-                set: { newValue in viewModel.setProviderEnabled(provider.id, newValue) }
-            )) {
-                HStack {
-                    Image(systemName: provider.symbolName)
-                        .foregroundStyle(.secondary)
-                    Text(provider.displayName)
-                    if !configured {
-                        Text("No key")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                    }
+        Toggle(isOn: Binding(
+            get: { isOn },
+            set: { newValue in viewModel.setProviderEnabled(provider.id, newValue) }
+        )) {
+            HStack {
+                Image(systemName: provider.symbolName)
+                    .foregroundStyle(.secondary)
+                Text(provider.displayName)
+                if !configured {
+                    Text("No key")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
                 }
             }
+        }
 
-            // Expand config fields when enabled.
-            if isOn {
-                configFields(for: provider)
-            }
-        } header: {
-            Text(provider.displayName)
+        // Expand config fields when enabled.
+        if isOn {
+            configFields(for: provider)
         }
     }
 
@@ -215,36 +212,27 @@ private struct ProvidersTab: View {
 
 private struct AboutTab: View {
     var body: some View {
-        VStack(spacing: 16) {
-            Image(nsImage: NSApplication.shared.applicationIconImage)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 96, height: 96)
-
+        VStack(spacing: 6) {
+            Spacer()
             Text("AIMonitor")
-                .font(.title2.bold())
-
+                .font(.title3.bold())
             Text("Version 0.1.0")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
             Text("Monitor AI service quotas from your menu bar.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            VStack(spacing: 8) {
-                Link("View on GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
-                Link("Report an Issue", destination: URL(string: "https://github.com/mgks/AIQuota/issues")!)
+            HStack(spacing: 16) {
+                Link("GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
+                    .font(.caption)
+                Link("Issues", destination: URL(string: "https://github.com/mgks/AIQuota/issues")!)
+                    .font(.caption)
             }
-            .padding(.top, 8)
-
+            .padding(.top, 4)
             Spacer()
-
-            Text("MIT License \u{00B7} \u{00A9} 2026 Ghazi")
+            Text("MIT \u{00B7} mgks.dev")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
-
             Spacer()
         }
         .padding()

@@ -27,14 +27,17 @@ enum MonitorMenuBarIcon {
             fallback.isTemplate = true
             return fallback
         }
-        // Rasterise at display size for crisp rendering.
-        let displaySize: CGFloat = 20
-        let img = NSImage(size: NSSize(width: displaySize, height: displaySize))
+        // Rasterise at 4x display size for clean anti-aliased edges, then the
+        // image scales down at render time - no halo/shadow artifacts.
+        let renderSize: CGFloat = 72
+        let displaySize: CGFloat = 18
+        let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
-        svgImage.draw(in: NSRect(x: 0, y: 0, width: displaySize, height: displaySize),
+        svgImage.draw(in: NSRect(x: 0, y: 0, width: renderSize, height: renderSize),
                       from: .zero, operation: .copy, fraction: 1.0)
         img.unlockFocus()
         img.isTemplate = true
+        img.size = NSSize(width: displaySize, height: displaySize)
         return img
     }()
 }
