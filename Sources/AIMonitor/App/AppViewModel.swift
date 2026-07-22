@@ -22,6 +22,8 @@ final class AppViewModel: ObservableObject {
         switch id {
         case "minimax": return minimaxConfigured
         case "zai": return zaiConfigured
+        case "deepseek": return KeychainStore().get("deepseek.apiKey") != nil
+        case "openrouter": return KeychainStore().get("openrouter.apiKey") != nil
         default: return false
         }
     }

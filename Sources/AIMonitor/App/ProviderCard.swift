@@ -74,9 +74,15 @@ struct ProviderCard: View {
     }
 
     /// Build the small grey lines under the bar: window reset countdowns,
-    /// last updated.
+    /// credits, last updated.
     private func detailLines(snapshot: QuotaSnapshot) -> [String] {
         var lines: [String] = []
+
+        // Credit balance (pay-as-you-go providers like OpenRouter, DeepSeek).
+        if let credits = Formatting.credits(snapshot.creditsRemaining,
+                                            currency: snapshot.currency ?? "USD") {
+            lines.append(credits)
+        }
 
         // 5h / interval window reset.
         if let reset = Formatting.countdown(to: snapshot.resetsAt) {
@@ -88,7 +94,7 @@ struct ProviderCard: View {
             lines.append("Weekly resets in \(weekly)")
         }
 
-        // Fall back to window label if no reset times.
+        // Fall back to window label if no reset times and no credits.
         if lines.isEmpty, let window = snapshot.windowLabel {
             lines.append(window)
         }

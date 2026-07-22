@@ -169,6 +169,14 @@ private struct CredentialsTab: View {
                     }
             }
 
+            Section("DeepSeek") {
+                SecureField("API Key", text: deepSeekKeyBinding)
+            }
+
+            Section("OpenRouter") {
+                SecureField("API Key", text: openRouterKeyBinding)
+            }
+
             Section {
                 Text("Keys are stored in the macOS Keychain, never synced, and sent only to the provider you choose.")
                     .font(.caption)
@@ -177,5 +185,30 @@ private struct CredentialsTab: View {
         }
         .formStyle(.grouped)
         .padding()
+    }
+
+    // Generic Keychain-backed bindings for providers without dedicated AppViewModel fields.
+    private var deepSeekKeyBinding: Binding<String> {
+        Binding(
+            get: { KeychainStore().get("deepseek.apiKey") ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty { KeychainStore().remove("deepseek.apiKey") }
+                else { try? KeychainStore().set(trimmed, for: "deepseek.apiKey") }
+                viewModel.refreshAll()
+            }
+        )
+    }
+
+    private var openRouterKeyBinding: Binding<String> {
+        Binding(
+            get: { KeychainStore().get("openrouter.apiKey") ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty { KeychainStore().remove("openrouter.apiKey") }
+                else { try? KeychainStore().set(trimmed, for: "openrouter.apiKey") }
+                viewModel.refreshAll()
+            }
+        )
     }
 }

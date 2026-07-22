@@ -67,6 +67,8 @@ final class ZaiProvider: AIProvider {
 
     private struct LimitInfo: Decodable {
         let type: String?
+        let unit: Int?              // 3 = 5-hour, 6 = weekly, 5 = MCP tools monthly
+        let number: Int?
         let percentage: Int?        // TOKENS_LIMIT: used percentage (0..100)
         let usage: Int?             // TIME_LIMIT: total requests in window
         let remaining: Int?         // TIME_LIMIT: remaining requests
@@ -96,34 +98,28 @@ final class ZaiProvider: AIProvider {
         }
 
         let limits = envelope.data?.limits ?? []
-        let timeLimit = limits.first { $0.type == "TIME_LIMIT" }
-        let tokensLimit = limits.first { $0.type == "TOKENS_LIMIT" }
 
-        // TOKENS_LIMIT.percentage is "used" percent; remaining = 100 - used.
-        let tokensRemaining: Double? = tokensLimit?.percentage.map { 100 - Double($0) }
-        let timeRemainingPct: Double? = {
-            guard let rem = timeLimit?.remaining, let total = timeLimit?.usage, total > 0
-            else { return nil }
-            return Double(rem) / Double(rem + total) * 100
-        }()
+        // The API returns TWO TOKENS_LIMIT entries distinguished by `unit`:
+        //   unit 3 = 5-hour rolling window
+        //   unit 6 = weekly window
+        // There may also be a TIME_LIMIT (unit 5) for MCP tools, which we skip.
+        let fiveHourLimit = limits.first { $0.type == "TOKENS_LIMIT" && $0.unit == 3 }
+        let weeklyLimit = limits.first { $0.type == "TOKENS_LIMIT" && $0.unit == 6 }
 
-        // Headline: prefer tokens (the binding limit), fall back to time.
-        let headline = tokensRemaining ?? timeRemainingPct
+        // percentage = "used" percent; remaining = 100 - used.
+        let fiveHourRemaining = fiveHourLimit?.percentage.map { 100 - Double($0) }
+        let weeklyRemaining = weeklyLimit?.percentage.map { 100 - Double($0) }
 
-        // Two reset windows, matching the MiniMax card layout.
-        let intervalReset = dateFromMs(timeLimit?.nextResetTime)
-        let weeklyReset = dateFromMs(tokensLimit?.nextResetTime)
+        // Headline: show the tighter (lower) of the two windows.
+        let headline = [fiveHourRemaining, weeklyRemaining].compactMap { $0 }.min()
 
         var snapshot = QuotaSnapshot(
             remainingPercent: headline,
-            resetsAt: intervalReset,
-            weeklyResetsAt: weeklyReset,
+            resetsAt: dateFromMs(fiveHourLimit?.nextResetTime),
+            weeklyResetsAt: dateFromMs(weeklyLimit?.nextResetTime),
             windowLabel: "5h + Weekly",
             rawHeaders: response.headers
         )
-        if let rem = timeLimit?.remaining {
-            snapshot.remainingRequests = rem
-        }
 
         return ProviderStatus(
             providerID: id,
