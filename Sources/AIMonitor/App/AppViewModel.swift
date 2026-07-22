@@ -20,6 +20,16 @@ final class AppViewModel: ObservableObject {
 
     func isProviderConfigured(_ id: String) -> Bool {
         switch id {
+        case "claude": return OAuthReader.load(CredentialSchema(
+            fileSubpath: ".claude/.credentials.json",
+            keychainService: "Claude Code-credentials")) != nil
+        case "codex": return OAuthReader.load(CredentialSchema(
+            fileSubpath: ".codex/auth.json",
+            oauthObjectKey: "",
+            accessTokenKey: "access_token",
+            refreshTokenKey: "refresh_token",
+            expiresAtKey: "expires_at")) != nil
+        case "kimi": return KeychainStore().get("kimi.apiKey") != nil
         case "minimax": return minimaxConfigured
         case "zai": return zaiConfigured
         case "deepseek": return KeychainStore().get("deepseek.apiKey") != nil

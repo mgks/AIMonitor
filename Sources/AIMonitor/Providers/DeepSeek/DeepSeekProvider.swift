@@ -98,7 +98,7 @@ final class DeepSeekProvider: AIProvider {
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
-            shortName: "DeepSeek",
+            shortName: "DS",
             model: currency,
             state: state,
             snapshot: snapshot,

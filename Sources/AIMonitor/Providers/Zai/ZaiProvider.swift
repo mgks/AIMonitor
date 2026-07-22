@@ -124,7 +124,7 @@ final class ZaiProvider: AIProvider {
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
-            shortName: "Z.ai",
+            shortName: "Z",
             model: envelope.data?.level,
             state: QuotaThresholds.state(forPercent: headline),
             snapshot: snapshot,

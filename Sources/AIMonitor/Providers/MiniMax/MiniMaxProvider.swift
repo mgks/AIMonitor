@@ -146,7 +146,7 @@ final class MiniMaxProvider: AIProvider {
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
-            shortName: "MiniMax",
+            shortName: "M",
             model: bucket.modelName ?? "general",
             state: QuotaThresholds.state(forPercent: headline),
             snapshot: snapshot,

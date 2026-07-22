@@ -8,11 +8,16 @@ public enum ProviderRegistry {
     @MainActor
     public static func makeDefault(http: HTTPClient, secrets: KeychainStore) -> [any AIProvider] {
         [
-            // Most popular first.
-            OpenRouterProvider(http: http, secrets: secrets),
-            DeepSeekProvider(http: http, secrets: secrets),
+            // OAuth-based coding plans (most popular, read CLI credentials).
+            ClaudeProvider(http: http, secrets: secrets),
+            CodexProvider(http: http, secrets: secrets),
+            // API-key coding plans.
+            KimiProvider(http: http, secrets: secrets),
             MiniMaxProvider(http: http, secrets: secrets),
-            ZaiProvider(http: http, secrets: secrets)
+            ZaiProvider(http: http, secrets: secrets),
+            // Pay-as-you-go balance providers.
+            DeepSeekProvider(http: http, secrets: secrets),
+            OpenRouterProvider(http: http, secrets: secrets)
         ]
     }
 }

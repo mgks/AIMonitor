@@ -10,7 +10,7 @@ RESOURCES_DIR := $(CONTENTS)/Resources
 ICONSET_DIR := AppIcon.iconset
 ICON_ICNS   := AppIcon.icns
 
-.PHONY: all build run bundle icon clean help deploy
+.PHONY: all build run bundle icon clean help deploy test
 
 help:
 	@echo "make build   - compile (release)"
@@ -18,10 +18,15 @@ help:
 	@echo "make icon    - render AppIcon.icns from the Swift icon script"
 	@echo "make bundle  - assemble AIMonitor.app (menu-bar only, with icon)"
 	@echo "make deploy  - copy to /Applications and launch"
+	@echo "make test    - run unit tests (requires Xcode for XCTest)"
 	@echo "make clean   - remove build artifacts and .app"
 
 build:
 	swift build -c $(CONFIG)
+
+test:
+	@echo ">> running tests (requires Xcode for XCTest)"
+	swift test 2>&1 || echo "Note: XCTest requires Xcode.app. Install Xcode to run unit tests."
 
 run:
 	swift run

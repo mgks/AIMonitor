@@ -111,7 +111,7 @@ final class OpenRouterProvider: AIProvider {
         return ProviderStatus(
             providerID: id,
             displayName: displayName,
-            shortName: "OpenRouter",
+            shortName: "OR",
             model: keyEnv.data?.label,
             state: QuotaThresholds.state(forPercent: pct),
             snapshot: snapshot,

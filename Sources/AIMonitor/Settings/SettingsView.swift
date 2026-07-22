@@ -147,6 +147,16 @@ private struct CredentialsTab: View {
 
     var body: some View {
         Form {
+            Section {
+                Text("Claude Code and Codex use OAuth credentials stored by their CLI tools. Log in with `claude` or `codex login` to enable them. No key needed here.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("Kimi") {
+                SecureField("API Key", text: kimiKeyBinding)
+            }
+
             Section("MiniMax") {
                 Picker("Region", selection: $minimaxRegion) {
                     Text("International (minimax.io)").tag("international")
@@ -188,6 +198,17 @@ private struct CredentialsTab: View {
     }
 
     // Generic Keychain-backed bindings for providers without dedicated AppViewModel fields.
+    private var kimiKeyBinding: Binding<String> {
+        Binding(
+            get: { KeychainStore().get("kimi.apiKey") ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty { KeychainStore().remove("kimi.apiKey") }
+                else { try? KeychainStore().set(trimmed, for: "kimi.apiKey") }
+                viewModel.refreshAll()
+            }
+        )
+    }
     private var deepSeekKeyBinding: Binding<String> {
         Binding(
             get: { KeychainStore().get("deepseek.apiKey") ?? "" },
