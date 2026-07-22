@@ -40,24 +40,79 @@ Only providers that are both enabled and have credentials appear in the popover.
 
 ## Supported providers
 
-| Provider | Endpoints | Data source |
-|---|---|---|
-| **MiniMax** | `api.minimax.io` (international), `api.minimaxi.com` (China) | Coding Plan Remains API |
-| **Z.ai (GLM)** | `api.z.ai` (international), `open.bigmodel.cn` (China) | Quota Limit monitor API |
+### OAuth providers (auto-login via CLI tools)
 
-More providers are added incrementally. Each is self-contained under `Sources/AIMonitor/Providers/<name>/`.
+These providers authenticate via their official CLI tools. Run the login command once, then enable the provider in Preferences. No manual API key entry needed.
+
+| Provider | CLI login command | Credential location | Data source |
+|---|---|---|---|
+| **Claude Code** | `claude` | `~/.claude/.credentials.json` or macOS Keychain `Claude Code-credentials` | `api.anthropic.com/api/oauth/usage` |
+| **Codex (OpenAI)** | `codex login` | `~/.codex/auth.json` | `chatgpt.com/backend-api/wham/usage` |
+
+Tokens auto-refresh when expired. The credentials are read-only; AIMonitor never modifies them.
+
+### API-key providers (enter key in Preferences)
+
+| Provider | Endpoints | Region options | Data source |
+|---|---|---|---|
+| **Kimi** | `api.kimi.com` | International only | Coding plan usage (`/coding/v1/usages`) |
+| **MiniMax** | `api.minimax.io`, `api.minimaxi.com` | International or China | Coding Plan Remains API |
+| **Z.ai (GLM)** | `api.z.ai`, `open.bigmodel.cn` | International or China | Quota Limit monitor API |
+| **DeepSeek** | `api.deepseek.com` | International only | Account balance |
+| **OpenRouter** | `openrouter.ai` | International only | Credit balance + usage |
+
+API keys are stored in the macOS Keychain (service `dev.mgks.aimonitor`), never written to disk or synced.
+
+## Prerequisites for OAuth providers
+
+To use Claude Code and Codex providers, you need their CLI tools installed and authenticated:
+
+```bash
+# Claude Code (Anthropic)
+npm install -g @anthropic-ai/claude-code
+claude              # follow the login flow
+
+# Codex (OpenAI)
+npm install -g @openai/codex
+codex login         # follow the login flow
+```
+
+After login, the credentials are written to disk. AIMonitor reads them automatically.
 
 ## Architecture
 
 ```
 Sources/AIMonitor/
 ├── App/            SwiftUI shell: MenuBarExtra, cards, settings
-├── Core/           Provider protocol, models, HTTP client, Keychain, scheduler
-├── Providers/      One folder per provider, no cross-dependencies
+├── Core/           Provider protocol, models, HTTP client, Keychain, scheduler,
+│                   OAuth credentials reader
+├── Providers/      One folder per provider, no cross-dependencies:
+│   ├── Claude/     OAuth, auto-refresh, usage endpoint
+│   ├── Codex/      OAuth, auto-refresh, usage endpoint
+│   ├── Kimi/       API key, coding plan
+│   ├── MiniMax/    API key, coding plan remains
+│   ├── Zai/        API key, quota limit (no Bearer prefix)
+│   ├── DeepSeek/   API key, account balance
+│   └── OpenRouter/ API key, credit balance
 └── Settings/       Preferences window
 ```
 
 Every provider implements the `AIProvider` protocol: it owns how to fetch and parse its own quota data and returns a normalised `ProviderStatus`. No provider knows about another. Adding a provider is one new file plus one line in `ProviderRegistry`.
+
+The three-tier data abstraction:
+
+1. **Official API** (preferred) - e.g. MiniMax Coding Plan, Z.ai Quota Limit.
+2. **OAuth usage endpoint** - Claude Code, Codex read quota via undocumented usage endpoints.
+3. **Account balance** - DeepSeek, OpenRouter show credit balance when no quota window exists.
+
+## Adding a new provider
+
+1. Create `Sources/AIMonitor/Providers/YourProvider/YourProvider.swift`.
+2. Implement `AIProvider` (fetch + parse + return `ProviderStatus`).
+3. Add it to `ProviderRegistry.makeDefault()`.
+4. Add credential fields in `SettingsView.swift`.
+
+For OAuth providers, define a `CredentialSchema` and use `OAuthReader.load()`.
 
 ## License
 

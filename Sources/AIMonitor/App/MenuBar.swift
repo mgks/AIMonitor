@@ -13,7 +13,7 @@ enum MonitorMenuBarIcon {
         img.lockFocus()
 
         let s = renderSize
-        let lw = s * 0.058    // slightly heavier for better visibility
+        let lw = s * 0.064    // a few micro pixels thicker for visibility
 
         // Rounded rect outline. Fill ~73% of frame like native icons.
         let inset = s * 0.135
@@ -51,12 +51,11 @@ enum MonitorMenuBarIcon {
 /// The menu bar icon: monitor logo plus optional stat summary.
 struct MenuBarLabel: View {
     @ObservedObject var viewModel: AppViewModel
-    @AppStorage(AppSettings.Keys.showSummary) private var showSummary = false
 
     var body: some View {
         HStack(spacing: 4) {
             Image(nsImage: MonitorMenuBarIcon.image)
-            if showSummary {
+            if viewModel.showSummary {
                 // Render compact segments: M 81% | Z 67%
                 // Pipes go BETWEEN segments, not after the last one.
                 let rows = viewModel.summaryRows

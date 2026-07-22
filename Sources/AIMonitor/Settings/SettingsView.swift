@@ -57,8 +57,11 @@ private struct GeneralTab: View {
             }
 
             Section("Menu bar summary") {
-                Toggle("Show usage summary in menu bar", isOn: $showSummary)
-                if showSummary {
+                Toggle("Show usage summary in menu bar", isOn: $viewModel.showSummary)
+                    .onChange(of: viewModel.showSummary) { newValue in
+                        UserDefaults.standard.set(newValue, forKey: AppSettings.Keys.showSummary)
+                    }
+                if viewModel.showSummary {
                     Picker("Display mode", selection: $summaryMode) {
                         ForEach(AppSettings.summaryModes, id: \.self) {
                             Text($0.capitalized).tag($0)
@@ -73,6 +76,17 @@ private struct GeneralTab: View {
                 Toggle("Warn under 10%", isOn: $notifyUnder10)
                 Toggle("When exhausted", isOn: $notifyExhausted)
                 Toggle("When quota resets", isOn: $notifyReset)
+            }
+
+            Section {
+                VStack(spacing: 6) {
+                    Text("AIMonitor v0.1.0")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    Link("View on GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
+                        .font(.system(size: 10))
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
             }
         }
         .formStyle(.grouped)

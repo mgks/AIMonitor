@@ -60,6 +60,7 @@ final class AppViewModel: ObservableObject {
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var lastRefresh: Date?
     @Published public var refreshInterval: TimeInterval = AppSettings.defaultRefreshInterval
+    @Published public var showSummary: Bool = UserDefaults.standard.bool(forKey: AppSettings.Keys.showSummary)
 
     public let providers: [any AIProvider]
     private let http = HTTPClient()
