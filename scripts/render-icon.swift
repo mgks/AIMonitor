@@ -68,15 +68,15 @@ for spec in sizes {
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     NSGraphicsContext.current?.imageInterpolation = .none
 
-    // Flat light-blue rounded rect background. No gradient, no shadow.
+    // Flat white rounded rect background (no teal, no gradient, no shadow).
     let cornerR = CGFloat(renderRes) * 0.225
     let bgPath = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: renderRes, height: renderRes),
                               xRadius: cornerR, yRadius: cornerR)
-    NSColor(red: 0.792, green: 0.941, blue: 0.996, alpha: 1).setFill()
+    NSColor.white.setFill()
     bgPath.fill()
 
-    // Draw the glyph SVG centered at 85% of the icon.
-    let inset = CGFloat(renderRes) * 0.075
+    // Draw the glyph SVG centered with generous padding (~75% of icon).
+    let inset = CGFloat(renderRes) * 0.125
     glyphImage.draw(in: NSRect(x: inset, y: inset,
                                width: CGFloat(renderRes) - 2 * inset,
                                height: CGFloat(renderRes) - 2 * inset),

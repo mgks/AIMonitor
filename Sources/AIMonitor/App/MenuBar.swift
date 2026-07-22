@@ -28,8 +28,8 @@ enum MonitorMenuBarIcon {
             return fallback
         }
         // Render at 4x display size then downscale for crisp, thin edges.
-        let renderSize: CGFloat = 60
-        let displaySize: CGFloat = 15
+        let renderSize: CGFloat = 52
+        let displaySize: CGFloat = 13
         let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
         svgImage.draw(in: NSRect(x: 0, y: 0, width: renderSize, height: renderSize),
