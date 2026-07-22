@@ -46,7 +46,7 @@ final class ClaudeProvider: AIProvider {
         OAuthReader.load(Self.schema) != nil
     }
 
-    func fetchStatus() async throws -> ProviderStatus {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
         guard var creds = OAuthReader.load(Self.schema) else {
             throw ProviderError.notConfigured
         }

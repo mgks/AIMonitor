@@ -61,16 +61,21 @@ public enum ProviderError: LocalizedError, Sendable {
 
 /// Every provider is self-contained: it owns how to fetch and parse its own
 /// quota data and returns a normalised ProviderStatus. No provider knows about
-/// another. Caching and display live in the view model; refresh + parse live here.
+/// another. The view model passes the API key (if any) at fetch time so the
+/// provider NEVER touches the keychain during a refresh.
 public protocol AIProvider: Sendable {
     var id: String { get }
     var displayName: String { get }
     var symbolName: String { get }
 
-    /// True when enough credentials exist to attempt a fetch.
-    var isConfigured: Bool { get }
+    /// Fetch fresh data. The apiKey is passed by the view model from its
+    /// in-memory cache; OAuth providers ignore it and read their own files.
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus
+}
 
-    /// Fetch fresh data from the provider and parse it into a ProviderStatus.
-    /// Implementations should never crash on malformed input; throw on failure.
-    func fetchStatus() async throws -> ProviderStatus
+extension AIProvider {
+    /// Convenience for providers that don't need an API key (OAuth providers).
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
+        try await fetchStatus(apiKey: "")
+    }
 }

@@ -15,23 +15,18 @@ final class DeepSeekProvider: AIProvider {
     let symbolName = "magnifyingglass"
 
     private let http: HTTPClient
-    private let secrets: KeychainStore
 
     init(http: HTTPClient, secrets: KeychainStore) {
         self.http = http
-        self.secrets = secrets
-    }
-
-    var isConfigured: Bool {
-        secrets.get("deepseek.apiKey") != nil
     }
 
     private var balanceURL: URL {
         URL(string: "https://api.deepseek.com/user/balance")!
     }
 
-    func fetchStatus() async throws -> ProviderStatus {
-        guard let key = secrets.get("deepseek.apiKey") else {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else {
             throw ProviderError.notConfigured
         }
 

@@ -19,6 +19,7 @@ public enum AppSettings {
         // Menu bar stat summary.
         public static let showSummary       = "menubar.showSummary"
         public static let summaryMode       = "menubar.summaryMode"
+        public static let summaryProvider   = "menubar.summaryProvider"   // which provider to show
     }
 
     public static let defaultRefreshInterval: TimeInterval = 60

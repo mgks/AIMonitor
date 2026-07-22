@@ -14,23 +14,18 @@ final class KimiProvider: AIProvider {
     let symbolName = "k.circle"
 
     private let http: HTTPClient
-    private let secrets: KeychainStore
 
     init(http: HTTPClient, secrets: KeychainStore) {
         self.http = http
-        self.secrets = secrets
-    }
-
-    var isConfigured: Bool {
-        secrets.get("kimi.apiKey") != nil
     }
 
     private var usagesURL: URL {
         URL(string: "https://api.kimi.com/coding/v1/usages")!
     }
 
-    func fetchStatus() async throws -> ProviderStatus {
-        guard let key = secrets.get("kimi.apiKey") else {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else {
             throw ProviderError.notConfigured
         }
 

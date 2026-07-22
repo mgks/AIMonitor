@@ -18,15 +18,9 @@ final class ZaiProvider: AIProvider {
     let symbolName = "bolt"             // placeholder glyph
 
     private let http: HTTPClient
-    private let secrets: KeychainStore
 
     init(http: HTTPClient, secrets: KeychainStore) {
         self.http = http
-        self.secrets = secrets
-    }
-
-    var isConfigured: Bool {
-        secrets.get("zai.apiKey") != nil
     }
 
     private var region: String {
@@ -38,8 +32,9 @@ final class ZaiProvider: AIProvider {
         return URL(string: "https://\(host)/api/monitor/usage/quota/limit")!
     }
 
-    func fetchStatus() async throws -> ProviderStatus {
-        guard let key = secrets.get("zai.apiKey") else {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else {
             throw ProviderError.notConfigured
         }
 

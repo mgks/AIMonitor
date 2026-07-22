@@ -19,15 +19,9 @@ final class MiniMaxProvider: AIProvider {
     let symbolName = "waveform"          // placeholder glyph until official art lands
 
     private let http: HTTPClient
-    private let secrets: KeychainStore
 
     init(http: HTTPClient, secrets: KeychainStore) {
         self.http = http
-        self.secrets = secrets
-    }
-
-    var isConfigured: Bool {
-        secrets.get("minimax.apiKey") != nil
     }
 
     // Region is non-secret so it lives in UserDefaults via AppStorage.
@@ -41,8 +35,9 @@ final class MiniMaxProvider: AIProvider {
         return URL(string: "https://\(host)/v1/api/openplatform/coding_plan/remains")!
     }
 
-    func fetchStatus() async throws -> ProviderStatus {
-        guard let key = secrets.get("minimax.apiKey") else {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else {
             throw ProviderError.notConfigured
         }
 

@@ -147,13 +147,24 @@ final class AppViewModel: ObservableObject {
         let targets = activeProviders
         guard !targets.isEmpty else { return }
 
+        // Build a key lookup from the in-memory cached keys.
+        // This avoids ANY keychain access during refresh.
+        let keyMap: [String: String] = [
+            "minimax": minimaxKey,
+            "zai": zaiKey,
+            "kimi": kimiKey,
+            "deepseek": deepSeekKey,
+            "openrouter": openRouterKey
+        ]
+
         isRefreshing = true
         Task { [weak self] in
             await withTaskGroup(of: (String, ProviderStatus?, String?).self) { group in
                 for provider in targets {
+                    let key = keyMap[provider.id] ?? ""
                     group.addTask {
                         do {
-                            let status = try await provider.fetchStatus()
+                            let status = try await provider.fetchStatus(apiKey: key)
                             return (provider.id, status, nil)
                         } catch {
                             return (provider.id, nil, error.localizedDescription)
@@ -175,33 +186,21 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Summary
+    // MARK: - Summary (single selected provider)
 
-    /// Providers opted into the menu bar summary. Stored as a comma list.
-    private static let summaryKey = "summaryProviders"
-
-    var summaryProviders: Set<String> {
-        let raw = UserDefaults.standard.string(forKey: Self.summaryKey) ?? ""
-        return Set(raw.split(separator: ",").map(String.init))
+    /// Which provider to show in the menu bar summary. Defaults to first active.
+    var summaryProviderID: String {
+        let stored = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryProvider) ?? ""
+        if !stored.isEmpty { return stored }
+        return activeProviders.first?.id ?? ""
     }
 
-    func isProviderInSummary(_ id: String) -> Bool {
-        // Default: all active providers show in summary.
-        if UserDefaults.standard.object(forKey: Self.summaryKey) == nil {
-            return isProviderActive(id)
-        }
-        return summaryProviders.contains(id)
-    }
-
-    func setProviderInSummary(_ id: String, _ on: Bool) {
-        var set = summaryProviders
-        if on { set.insert(id) } else { set.remove(id) }
-        UserDefaults.standard.set(set.sorted().joined(separator: ","), forKey: Self.summaryKey)
+    func setSummaryProvider(_ id: String) {
+        UserDefaults.standard.set(id, forKey: AppSettings.Keys.summaryProvider)
         objectWillChange.send()
     }
 
-    /// Summary rows for the menu bar label: short name + percent for each
-    /// active provider opted into the summary.
+    /// The single summary row for the menu bar label.
     struct SummaryRow: Identifiable {
         let id: String
         let shortName: String
@@ -209,19 +208,19 @@ final class AppViewModel: ObservableObject {
         let state: QuotaState
     }
 
-    var summaryRows: [SummaryRow] {
+    var summaryRow: SummaryRow? {
+        let id = summaryProviderID
+        guard !id.isEmpty,
+              let status = statuses[id],
+              let pct = status.snapshot.remainingPercent else { return nil }
         let showUsed = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryMode) ?? "remaining" == "used"
-        return activeProviders.filter { isProviderInSummary($0.id) }.compactMap { provider in
-            guard let pct = statuses[provider.id]?.snapshot.remainingPercent else { return nil }
-            let displayed = showUsed ? 100 - pct : pct
-            let name = statuses[provider.id]?.shortName ?? provider.displayName
-            return SummaryRow(
-                id: provider.id,
-                shortName: name,
-                percent: displayed,
-                state: QuotaThresholds.state(forPercent: pct)
-            )
-        }
+        let displayed = showUsed ? 100 - pct : pct
+        return SummaryRow(
+            id: id,
+            shortName: status.shortName,
+            percent: displayed,
+            state: QuotaThresholds.state(forPercent: pct)
+        )
     }
 
     /// Legacy single headline percent (worst case), kept for compatibility.

@@ -44,7 +44,7 @@ final class CodexProvider: AIProvider {
         expiresAtKey: "expires_at"    // epoch seconds (not ms)
     )
 
-    func fetchStatus() async throws -> ProviderStatus {
+    func fetchStatus(apiKey: String) async throws -> ProviderStatus {
         guard var creds = OAuthReader.load(Self.codexSchema) else {
             throw ProviderError.notConfigured
         }

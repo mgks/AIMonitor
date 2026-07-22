@@ -55,21 +55,11 @@ struct MenuBarLabel: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(nsImage: MonitorMenuBarIcon.image)
-            if viewModel.showSummary {
-                // Render compact segments: M 81% | Z 67%
-                // Pipes go BETWEEN segments, not after the last one.
-                let rows = viewModel.summaryRows
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    if index > 0 {
-                        Text("|")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
-                    }
-                    Text("\(row.shortName) \(Formatting.percent(row.percent) ?? "")")
-                        .font(.system(size: 11, weight: .medium))
-                        .monospacedDigit()
-                        .foregroundStyle(colour(for: row.state))
-                }
+            if viewModel.showSummary, let row = viewModel.summaryRow {
+                Text("\(row.shortName) \(Formatting.percent(row.percent) ?? "")")
+                    .font(.system(size: 11, weight: .medium))
+                    .monospacedDigit()
+                    .foregroundStyle(colour(for: row.state))
             }
         }
     }
