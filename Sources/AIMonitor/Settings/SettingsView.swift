@@ -204,9 +204,9 @@ private struct AboutTab: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack(spacing: 16) {
-                Link("GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
+                Link("GitHub", destination: URL(string: "https://github.com/mgks/AIMonitor")!)
                     .font(.caption)
-                Link("Issues", destination: URL(string: "https://github.com/mgks/AIQuota/issues")!)
+                Link("Issues", destination: URL(string: "https://github.com/mgks/AIMonitor/issues")!)
                     .font(.caption)
             }
             .padding(.top, 4)

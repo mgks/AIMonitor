@@ -7,8 +7,8 @@
 
 Monitor AI service quotas from your menu bar.
 
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://github.com/mgks/AIQuota)
-[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)](https://github.com/mgks/AIQuota)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://github.com/mgks/AIMonitor)
+[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)](https://github.com/mgks/AIMonitor)
 [![MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 </div>
@@ -33,15 +33,15 @@ No chat. No prompting. No playground. Just a glance at how much you have left.
 ## Installation
 
 <!-- TODO: Add download link once a release is published -->
-<!-- Download the latest `.dmg` from [Releases](https://github.com/mgks/AIQuota/releases) -->
+<!-- Download the latest `.dmg` from [Releases](https://github.com/mgks/AIMonitor/releases) -->
 
 ### Build from source
 
 Requires macOS 13+ and the Command Line Tools (no Xcode needed):
 
 ```bash
-git clone https://github.com/mgks/AIQuota.git
-cd AIQuota/AIMonitor
+git clone https://github.com/mgks/AIMonitor.git
+cd AIMonitor
 make deploy
 ```
 

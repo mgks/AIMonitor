@@ -9,14 +9,17 @@ MACOS_DIR   := $(CONTENTS)/MacOS
 RESOURCES_DIR := $(CONTENTS)/Resources
 ICONSET_DIR := AppIcon.iconset
 ICON_ICNS   := AppIcon.icns
+DMG_NAME    := $(APP_NAME)-0.1.0.dmg
+STAGING     := dmg-staging
 
-.PHONY: all build run bundle icon clean help deploy test
+.PHONY: all build run bundle icon dmg clean help deploy test
 
 help:
 	@echo "make build   - compile (release)"
 	@echo "make run     - run from source (shows dock icon, good for dev)"
 	@echo "make icon    - render AppIcon.icns from the Swift icon script"
 	@echo "make bundle  - assemble AIMonitor.app (menu-bar only, with icon)"
+	@echo "make dmg     - build bundle + create distributable .dmg"
 	@echo "make deploy  - copy to /Applications and launch"
 	@echo "make test    - run unit tests (requires Xcode for XCTest)"
 	@echo "make clean   - remove build artifacts and .app"
