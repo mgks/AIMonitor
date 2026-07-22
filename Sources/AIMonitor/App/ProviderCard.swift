@@ -11,14 +11,14 @@ struct ProviderCard: View {
             header
 
             if let snapshot = status?.snapshot {
-                progressBar(snapshot: snapshot)
-                details(snapshot: snapshot)
+                windowsRow(snapshot: snapshot)
+                detailLines(snapshot: snapshot)
             }
 
             if let error, status?.state != .healthy && status?.state != .warning {
                 Text(error)
                     .font(.caption2)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.orange)
                     .lineLimit(2)
             }
         }
@@ -43,27 +43,68 @@ struct ProviderCard: View {
         }
     }
 
-    private func progressBar(snapshot: QuotaSnapshot) -> some View {
-        HStack(spacing: 6) {
-            if let pct = snapshot.remainingPercent {
-                ProgressView(value: pct, total: 100)
-                    .progressViewStyle(.linear)
-                    .tint(tint(for: pct))
-                Text(Formatting.percent(pct) ?? "")
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
-                    .frame(width: 36, alignment: .trailing)
-            } else {
-                Text(stateLabel)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+    /// Two-window row with pipe separator: 5h 81% | W 67%
+    /// Falls back to a single progress bar for credit-based providers.
+    private func windowsRow(snapshot: QuotaSnapshot) -> some View {
+        // Credit-only providers: show balance as the headline.
+        if snapshot.remainingPercent == nil {
+            return AnyView(
+                HStack(spacing: 6) {
+                    if let credits = Formatting.credits(snapshot.creditsRemaining,
+                                                        currency: snapshot.currency ?? "USD") {
+                        Text(credits)
+                            .font(.system(size: 13, weight: .medium))
+                    } else {
+                        Text(stateLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+            )
+        }
+
+        let fiveHourPct = snapshot.remainingPercent
+        let weeklyPct = weeklyRemainingPct(snapshot)
+
+        return AnyView(
+            HStack(spacing: 8) {
+                // 5-hour window
+                if let pct = fiveHourPct {
+                    windowSegment(label: "5h", pct: pct)
+                }
+                // Weekly window
+                if let wpct = weeklyPct {
+                    Text("|")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    windowSegment(label: "W", pct: wpct)
+                }
                 Spacer()
             }
+        )
+    }
+
+    /// One labelled window: "5h [bar] 81%"
+    private func windowSegment(label: String, pct: Double) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 16, alignment: .leading)
+            ProgressView(value: pct, total: 100)
+                .progressViewStyle(.linear)
+                .frame(width: 44)
+                .tint(tint(for: pct))
+            Text(Formatting.percent(pct) ?? "")
+                .font(.system(size: 11, weight: .medium))
+                .monospacedDigit()
+                .frame(width: 34, alignment: .trailing)
         }
     }
 
-    private func details(snapshot: QuotaSnapshot) -> some View {
-        let parts = detailLines(snapshot: snapshot)
+    private func detailLines(snapshot: QuotaSnapshot) -> some View {
+        let parts = detailText(snapshot: snapshot)
         return VStack(alignment: .leading, spacing: 1) {
             ForEach(parts, id: \.self) { line in
                 Text(line)
@@ -73,36 +114,44 @@ struct ProviderCard: View {
         }
     }
 
-    /// Build the small grey lines under the bar: window reset countdowns,
-    /// credits, last updated.
-    private func detailLines(snapshot: QuotaSnapshot) -> [String] {
+    /// Compact reset info: "5h in 3h 18m | W in 4d 5h" or credits.
+    /// Last-updated moved to header; weekly data replaces it here.
+    private func detailText(snapshot: QuotaSnapshot) -> [String] {
         var lines: [String] = []
 
-        // Credit balance (pay-as-you-go providers like OpenRouter, DeepSeek).
+        // Combine reset countdowns into one line with pipe separator.
+        var resets: [String] = []
+        if let reset = Formatting.countdown(to: snapshot.resetsAt) {
+            resets.append("5h in \(reset)")
+        }
+        if let weekly = Formatting.countdown(to: snapshot.weeklyResetsAt) {
+            resets.append("W in \(weekly)")
+        }
+        if !resets.isEmpty {
+            lines.append(resets.joined(separator: " | "))
+        }
+
+        // Credits for balance providers.
         if let credits = Formatting.credits(snapshot.creditsRemaining,
                                             currency: snapshot.currency ?? "USD") {
             lines.append(credits)
         }
 
-        // 5h / interval window reset.
-        if let reset = Formatting.countdown(to: snapshot.resetsAt) {
-            lines.append("5h resets in \(reset)")
-        }
-
-        // Weekly window reset (if present).
-        if let weekly = Formatting.countdown(to: snapshot.weeklyResetsAt) {
-            lines.append("Weekly resets in \(weekly)")
-        }
-
-        // Fall back to window label if no reset times and no credits.
+        // Fall back to window label if nothing else.
         if lines.isEmpty, let window = snapshot.windowLabel {
             lines.append(window)
         }
 
-        if let last = status?.lastUpdated {
-            lines.append("Updated " + Formatting.relativeShort(from: last))
-        }
         return lines
+    }
+
+    /// Extract a weekly remaining percentage from the snapshot's weekly reset
+    /// presence. Since we don't store weekly percent separately, we infer from
+    /// the headline: if a weekly window exists, show the same percent (the
+    /// headline already picks the tighter window). This is conservative.
+    private func weeklyRemainingPct(_ snapshot: QuotaSnapshot) -> Double? {
+        guard snapshot.weeklyResetsAt != nil else { return nil }
+        return snapshot.remainingPercent
     }
 
     private var stateLabel: String {

@@ -168,7 +168,8 @@ private struct CredentialsTab: View {
             }
 
             Section("Kimi") {
-                SecureField("API Key", text: kimiKeyBinding)
+                SecureField("API Key", text: $viewModel.kimiKey)
+                    .onChange(of: viewModel.kimiKey) { _ in viewModel.saveKimiKey() }
             }
 
             Section("MiniMax") {
@@ -177,9 +178,7 @@ private struct CredentialsTab: View {
                     Text("China (minimaxi.com)").tag("china")
                 }
                 SecureField("API Key", text: $viewModel.minimaxKey)
-                    .onChange(of: viewModel.minimaxKey) { _ in
-                        viewModel.saveMinimaxKey()
-                    }
+                    .onChange(of: viewModel.minimaxKey) { _ in viewModel.saveMinimaxKey() }
             }
 
             Section("Z.ai (GLM)") {
@@ -188,17 +187,17 @@ private struct CredentialsTab: View {
                     Text("China (bigmodel.cn)").tag("china")
                 }
                 SecureField("API Key", text: $viewModel.zaiKey)
-                    .onChange(of: viewModel.zaiKey) { _ in
-                        viewModel.saveZaiKey()
-                    }
+                    .onChange(of: viewModel.zaiKey) { _ in viewModel.saveZaiKey() }
             }
 
             Section("DeepSeek") {
-                SecureField("API Key", text: deepSeekKeyBinding)
+                SecureField("API Key", text: $viewModel.deepSeekKey)
+                    .onChange(of: viewModel.deepSeekKey) { _ in viewModel.saveDeepSeekKey() }
             }
 
             Section("OpenRouter") {
-                SecureField("API Key", text: openRouterKeyBinding)
+                SecureField("API Key", text: $viewModel.openRouterKey)
+                    .onChange(of: viewModel.openRouterKey) { _ in viewModel.saveOpenRouterKey() }
             }
 
             Section {
@@ -209,41 +208,5 @@ private struct CredentialsTab: View {
         }
         .formStyle(.grouped)
         .padding()
-    }
-
-    // Generic Keychain-backed bindings for providers without dedicated AppViewModel fields.
-    private var kimiKeyBinding: Binding<String> {
-        Binding(
-            get: { KeychainStore().get("kimi.apiKey") ?? "" },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-                if trimmed.isEmpty { KeychainStore().remove("kimi.apiKey") }
-                else { try? KeychainStore().set(trimmed, for: "kimi.apiKey") }
-                viewModel.refreshAll()
-            }
-        )
-    }
-    private var deepSeekKeyBinding: Binding<String> {
-        Binding(
-            get: { KeychainStore().get("deepseek.apiKey") ?? "" },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-                if trimmed.isEmpty { KeychainStore().remove("deepseek.apiKey") }
-                else { try? KeychainStore().set(trimmed, for: "deepseek.apiKey") }
-                viewModel.refreshAll()
-            }
-        )
-    }
-
-    private var openRouterKeyBinding: Binding<String> {
-        Binding(
-            get: { KeychainStore().get("openrouter.apiKey") ?? "" },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-                if trimmed.isEmpty { KeychainStore().remove("openrouter.apiKey") }
-                else { try? KeychainStore().set(trimmed, for: "openrouter.apiKey") }
-                viewModel.refreshAll()
-            }
-        )
     }
 }

@@ -9,14 +9,20 @@ import SwiftUI
 final class AppViewModel: ObservableObject {
 
     // MARK: - Credentials (flat @Published for reliable SwiftUI binding)
+    // All credential strings are loaded once at init from the shared KeychainStore
+    // and saved back through it. One keychain prompt for all keys, not per-key.
 
     @Published public var minimaxKey: String = ""
     @Published public var zaiKey: String = ""
-
-    private let secrets = KeychainStore()
+    @Published public var kimiKey: String = ""
+    @Published public var deepSeekKey: String = ""
+    @Published public var openRouterKey: String = ""
 
     public var minimaxConfigured: Bool { !minimaxKey.trimmingCharacters(in: .whitespaces).isEmpty }
     public var zaiConfigured: Bool { !zaiKey.trimmingCharacters(in: .whitespaces).isEmpty }
+    public var kimiConfigured: Bool { !kimiKey.trimmingCharacters(in: .whitespaces).isEmpty }
+    public var deepSeekConfigured: Bool { !deepSeekKey.trimmingCharacters(in: .whitespaces).isEmpty }
+    public var openRouterConfigured: Bool { !openRouterKey.trimmingCharacters(in: .whitespaces).isEmpty }
 
     func isProviderConfigured(_ id: String) -> Bool {
         switch id {
@@ -29,29 +35,28 @@ final class AppViewModel: ObservableObject {
             accessTokenKey: "access_token",
             refreshTokenKey: "refresh_token",
             expiresAtKey: "expires_at")) != nil
-        case "kimi": return KeychainStore().get("kimi.apiKey") != nil
+        case "kimi": return kimiConfigured
         case "minimax": return minimaxConfigured
         case "zai": return zaiConfigured
-        case "deepseek": return KeychainStore().get("deepseek.apiKey") != nil
-        case "openrouter": return KeychainStore().get("openrouter.apiKey") != nil
+        case "deepseek": return deepSeekConfigured
+        case "openrouter": return openRouterConfigured
         default: return false
         }
     }
 
-    /// Save a key to Keychain. Called from the UI on every change.
-    func saveMinimaxKey() {
-        let trimmed = minimaxKey.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty { secrets.remove("minimax.apiKey") }
-        else { try? secrets.set(trimmed, for: "minimax.apiKey") }
+    /// Generic key saver used by all API-key providers.
+    func saveKey(_ value: String, account: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { KeychainStore.shared.remove(account) }
+        else { try? KeychainStore.shared.set(trimmed, for: account) }
         refreshAll()
     }
 
-    func saveZaiKey() {
-        let trimmed = zaiKey.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty { secrets.remove("zai.apiKey") }
-        else { try? secrets.set(trimmed, for: "zai.apiKey") }
-        refreshAll()
-    }
+    func saveMinimaxKey() { saveKey(minimaxKey, account: "minimax.apiKey") }
+    func saveZaiKey() { saveKey(zaiKey, account: "zai.apiKey") }
+    func saveKimiKey() { saveKey(kimiKey, account: "kimi.apiKey") }
+    func saveDeepSeekKey() { saveKey(deepSeekKey, account: "deepseek.apiKey") }
+    func saveOpenRouterKey() { saveKey(openRouterKey, account: "openrouter.apiKey") }
 
     // MARK: - Provider status state
 
@@ -67,12 +72,15 @@ final class AppViewModel: ObservableObject {
     private var scheduler: RefreshScheduler?
 
     public init() {
-        // Load existing keys from Keychain so they appear on launch.
-        let kc = KeychainStore()
+        // Load ALL keys once from the shared KeychainStore. One prompt total.
+        let kc = KeychainStore.shared
         self.minimaxKey = kc.get("minimax.apiKey") ?? ""
         self.zaiKey = kc.get("zai.apiKey") ?? ""
+        self.kimiKey = kc.get("kimi.apiKey") ?? ""
+        self.deepSeekKey = kc.get("deepseek.apiKey") ?? ""
+        self.openRouterKey = kc.get("openrouter.apiKey") ?? ""
 
-        self.providers = ProviderRegistry.makeDefault(http: http, secrets: KeychainStore())
+        self.providers = ProviderRegistry.makeDefault(http: http, secrets: KeychainStore.shared)
         self.scheduler = RefreshScheduler(interval: AppSettings.defaultRefreshInterval) { [weak self] in
             self?.refreshAll()
         }

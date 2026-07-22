@@ -2,11 +2,15 @@ import Foundation
 import Security
 
 /// Minimal dependency-free wrapper around the macOS Keychain.
-/// Stores API keys and optional session cookies per provider account.
-public struct KeychainStore: Sendable {
+/// Uses a SINGLE shared instance to avoid multiple permission prompts on
+/// unsigned dev builds. All credential access goes through KeychainStore.shared.
+public final class KeychainStore: @unchecked Sendable {
     public let service: String
 
-    public init(service: String = "dev.mgks.aimonitor") {
+    /// Single shared instance. Use this everywhere; never create new instances.
+    public static let shared = KeychainStore(service: "dev.mgks.aimonitor")
+
+    private init(service: String) {
         self.service = service
     }
 
@@ -25,6 +29,7 @@ public struct KeychainStore: Sendable {
 
         var add = baseQuery
         add[kSecValueData as String] = data
+        // Use 'allow all' access so the app doesn't prompt per-item.
         add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
         let status = SecItemAdd(add as CFDictionary, nil)

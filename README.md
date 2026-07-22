@@ -113,7 +113,3 @@ The three-tier data abstraction:
 4. Add credential fields in `SettingsView.swift`.
 
 For OAuth providers, define a `CredentialSchema` and use `OAuthReader.load()`.
-
-## License
-
-MIT. See `LICENSE`.
