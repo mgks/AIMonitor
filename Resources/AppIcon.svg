@@ -1,9 +1,7 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <!-- Uploaded to: SVG Repo, www.svgrepo.com, Transformed by: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="-2.4 -2.4 28.80 28.80" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="SVGRepo_bgCarrier" stroke-width="0">
-<rect x="-2.4" y="-2.4" width="28.80" height="28.80" rx="4.6080000000000005" fill="#ffffff" strokewidth="0"/>
-</g>
+<svg fill="#006d8f" version="1.1" id="Layer_1" xmlns:x="&amp;ns_extend;" xmlns:i="&amp;ns_ai;" xmlns:graph="&amp;ns_graphs;" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256px" height="256px" viewBox="-2.4 -2.4 28.80 28.80" enable-background="new 0 0 24 24" xml:space="preserve" stroke="#006d8f" transform="matrix(1, 0, 0, 1, 0, 0)" stroke-width="0.00024000000000000003">
+<g id="SVGRepo_bgCarrier" stroke-width="0"/>
 <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"/>
-<g id="SVGRepo_iconCarrier"> <path d="M17.4904 2.84973H6.50981C4.48834 2.84973 2.84961 4.48846 2.84961 6.50993V17.4905C2.84961 19.512 4.48834 21.1507 6.50981 21.1507H17.4904C19.5119 21.1507 21.1506 19.512 21.1506 17.4905V6.50993C21.1506 4.48846 19.5119 2.84973 17.4904 2.84973Z" stroke="#2a2a2a" stroke-width="1.69905" stroke-linecap="round"/> <path d="M7.03589 12H9.43279C9.80517 12 10.1623 11.8521 10.4256 11.5888L12.4964 9.51798C13.0448 8.96965 13.9338 8.96965 14.4821 9.51798L16.9642 12" stroke="#DF1463" stroke-width="1.69905" stroke-linecap="round"/> </g>
+<g id="SVGRepo_iconCarrier"> <metadata> <sfw xmlns="&amp;ns_sfw;"> <slices xmlns="http://www.w3.org/2000/svg"> </slices> <slicesourcebounds xmlns="http://www.w3.org/2000/svg" width="505" height="984" bottomleftorigin="true" x="0" y="-984"> </slicesourcebounds> </sfw> </metadata> <g> <g> <g> <path d="M12,24C5.4,24,0,18.6,0,12S5.4,0,12,0s12,5.4,12,12S18.6,24,12,24z M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10 S17.5,2,12,2z"/> </g> </g> <g> <g> <rect x="2" y="16" width="20" height="2"/> </g> </g> <g> <g> <path d="M12,18c-0.2,0-0.3,0-0.5-0.1c-0.5-0.3-0.6-0.9-0.4-1.4l5-8.7c0.3-0.5,0.9-0.6,1.4-0.4c0.5,0.3,0.6,0.9,0.4,1.4l-5,8.7 C12.7,17.8,12.3,18,12,18z"/> </g> </g> </g> </g>
 </svg>

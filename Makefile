@@ -53,6 +53,18 @@ bundle: build icon
 	@if [ -f $(ICON_ICNS) ]; then cp $(ICON_ICNS) "$(RESOURCES_DIR)/AppIcon.icns"; else echo "  (no icon)"; fi
 	@echo ">> built $(APP_DIR)"
 
+# Create a distributable DMG. No external tools required (uses hdiutil).
+dmg: bundle
+	@echo ">> creating $(DMG_NAME)"
+	@rm -rf $(STAGING) $(DMG_NAME)
+	@mkdir -p $(STAGING)
+	@cp -R $(APP_DIR) $(STAGING)/
+	@ln -s /Applications $(STAGING)/Applications
+	@hdiutil create -volname "$(APP_NAME)" -srcfolder $(STAGING) -fs HFS+ \
+		-format UDZO -imagekey zlib-level=9 $(DMG_NAME) 2>/dev/null
+	@rm -rf $(STAGING)
+	@echo ">> built $(DMG_NAME)"
+
 # Deploy to /Applications for live testing.
 deploy: bundle
 	@echo ">> deploying to /Applications"
@@ -65,4 +77,4 @@ deploy: bundle
 
 clean:
 	swift package clean
-	rm -rf $(APP_DIR) $(ICONSET_DIR) $(ICON_ICNS)
+	rm -rf $(APP_DIR) $(ICONSET_DIR) $(ICON_ICNS) $(DMG_NAME) $(STAGING)
