@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
-// Renders AIMonitor's app icon programmatically with CoreGraphics.
-// Design: circle outline + horizontal bar + diagonal needle (teal on light-blue).
-// Flat, no shadows. Matches the monitor-icon SVG source.
+// Renders AIMonitor's app icon from the SVG source via NSImage.
+// Uses macOS native SVG rasterisation for faithful vector rendering.
+// Background added in code (light-blue rounded rect matching the -bg SVG).
 //
 // Usage: swift scripts/render-icon.swift <output-iconset-dir>
 
@@ -23,70 +23,64 @@ let sizes: [(name: String, pixels: Int)] = [
     ("icon_512x512", 512), ("icon_512x512@2x", 1024)
 ]
 
-// Colors from the SVG: fill #006d8f, bg #caf0fe
-let tealColor = CGColor(red: 0.0, green: 0.427, blue: 0.561, alpha: 1)
-let lightBlue = CGColor(red: 0.792, green: 0.941, blue: 0.996, alpha: 1)
+// The SVG glyph (no background, just the monitor shape) in teal.
+let svgGlyph = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="256" height="256">
+  <g fill="#006d8f">
+    <path d="M12,24C5.4,24,0,18.6,0,12S5.4,0,12,0s12,5.4,12,12S18.6,24,12,24z M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z"/>
+    <rect x="2" y="16" width="20" height="2"/>
+    <path d="M12,18c-0.2,0-0.3,0-0.5-0.1c-0.5-0.3-0.6-0.9-0.4-1.4l5-8.7c0.3-0.5,0.9-0.6,1.4-0.4c0.5,0.3,0.6,0.9,0.4,1.4l-5,8.7C12.7,17.8,12.3,18,12,18z"/>
+  </g>
+</svg>
+"""
 
-func drawIcon(into ctx: CGContext, size: CGFloat) {
-    let s = size
-
-    // Rounded rect background (light blue).
-    let cornerR = s * 0.225
-    let bgPath = CGMutablePath()
-    bgPath.addRoundedRect(in: CGRect(x: 0, y: 0, width: s, height: s),
-                          cornerWidth: cornerR, cornerHeight: cornerR)
-    ctx.addPath(bgPath)
-    ctx.setFillColor(lightBlue)
-    ctx.fillPath()
-
-    // Circle outline (teal).
-    let cx = s * 0.5
-    let cy = s * 0.5
-    let r = s * 0.375
-    ctx.setStrokeColor(tealColor)
-    ctx.setLineWidth(s * 0.067)
-    ctx.addEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
-    ctx.strokePath()
-
-    // Horizontal bar near bottom of circle.
-    let barY = cy - r * 0.35
-    ctx.move(to: CGPoint(x: cx - r * 0.85, y: barY))
-    ctx.addLine(to: CGPoint(x: cx + r * 0.85, y: barY))
-    ctx.setLineWidth(s * 0.067)
-    ctx.setLineCap(.round)
-    ctx.strokePath()
-
-    // Diagonal needle: from lower-left going up to upper-right.
-    // Matches the SVG path: starts near (0.4, 0.6), ends near (0.7, 0.2).
-    let needle = CGMutablePath()
-    needle.move(to: CGPoint(x: cx - r * 0.25, y: cy + r * 0.05))
-    needle.addLine(to: CGPoint(x: cx + r * 0.5, y: cy + r * 0.7))
-    ctx.addPath(needle)
-    ctx.setLineWidth(s * 0.067)
-    ctx.setLineCap(.round)
-    ctx.strokePath()
+// Write the glyph SVG to a temp file for NSImage to load.
+let tempSVG = "/tmp/aistat-glyph.svg"
+try svgGlyph.write(toFile: tempSVG, atomically: true, encoding: .utf8)
+let svgURL = URL(fileURLWithPath: tempSVG)
+guard let glyphImage = NSImage(contentsOf: svgURL) else {
+    FileHandle.standardError.write("could not load glyph SVG\n".data(using: .utf8)!)
+    exit(1)
 }
 
 for spec in sizes {
     let pixels = spec.pixels
-    guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
-          let ctx = CGContext(data: nil, width: pixels, height: pixels,
-                              bitsPerComponent: 8, bytesPerRow: 0,
-                              space: cs,
-                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-    else {
-        FileHandle.standardError.write("context failed for \(spec.name)\n".data(using: .utf8)!)
+    guard let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: pixels,
+        pixelsHigh: pixels,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+    ) else {
+        FileHandle.standardError.write("bitmap rep failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
-    ctx.setShouldAntialias(pixels >= 64)
-    drawIcon(into: ctx, size: CGFloat(pixels))
+    rep.size = NSSize(width: pixels, height: pixels)
 
-    guard let img = ctx.makeImage() else {
-        FileHandle.standardError.write("render failed for \(spec.name)\n".data(using: .utf8)!)
-        exit(1)
-    }
-    let bmp = NSBitmapImageRep(cgImage: img)
-    guard let png = bmp.representation(using: .png, properties: [:]) else {
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+
+    // Light-blue rounded rect background (#caf0fe).
+    let cornerR = CGFloat(pixels) * 0.225
+    let bgPath = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: pixels, height: pixels),
+                              xRadius: cornerR, yRadius: cornerR)
+    NSColor(red: 0.792, green: 0.941, blue: 0.996, alpha: 1).setFill()
+    bgPath.fill()
+
+    // Draw the glyph SVG centered, filling ~85% of the icon.
+    let inset = CGFloat(pixels) * 0.075
+    glyphImage.draw(in: NSRect(x: inset, y: inset, width: CGFloat(pixels) - 2 * inset,
+                               height: CGFloat(pixels) - 2 * inset),
+                    from: .zero, operation: .sourceOver, fraction: 1.0)
+
+    NSGraphicsContext.restoreGraphicsState()
+
+    guard let png = rep.representation(using: .png, properties: [:]) else {
         FileHandle.standardError.write("png encode failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }

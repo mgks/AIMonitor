@@ -1,6 +1,7 @@
 import SwiftUI
+import UserNotifications
 
-/// Preferences window: General, Providers, Credentials.
+/// Preferences window: General, Providers, About.
 struct SettingsView: View {
     @ObservedObject var viewModel: AppViewModel
 
@@ -12,10 +13,10 @@ struct SettingsView: View {
             ProvidersTab(viewModel: viewModel)
                 .tabItem { Label("Providers", systemImage: "list.bullet") }
 
-            CredentialsTab(viewModel: viewModel)
-                .tabItem { Label("Credentials", systemImage: "key.fill") }
+            AboutTab()
+                .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 460, height: 440)
+        .frame(width: 460, height: 460)
     }
 }
 
@@ -26,8 +27,6 @@ private struct GeneralTab: View {
     @AppStorage(AppSettings.Keys.launchAtLogin) private var launchAtLogin = false
     @AppStorage(AppSettings.Keys.refreshInterval) private var interval = AppSettings.defaultRefreshInterval
     @AppStorage(AppSettings.Keys.appearance) private var appearance = "system"
-    @AppStorage(AppSettings.Keys.showSummary) private var showSummary = false
-    @AppStorage(AppSettings.Keys.summaryMode) private var summaryMode = "remaining"
     @AppStorage(AppSettings.Keys.notifyUnder20) private var notifyUnder20 = true
     @AppStorage(AppSettings.Keys.notifyUnder10) private var notifyUnder10 = true
     @AppStorage(AppSettings.Keys.notifyExhausted) private var notifyExhausted = true
@@ -87,17 +86,10 @@ private struct GeneralTab: View {
                 Toggle("Warn under 10%", isOn: $notifyUnder10)
                 Toggle("When exhausted", isOn: $notifyExhausted)
                 Toggle("When quota resets", isOn: $notifyReset)
-            }
-
-            Section {
-                VStack(spacing: 6) {
-                    Text("AIMonitor v0.1.0")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Link("View on GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
-                        .font(.system(size: 10))
+                Button("Enable Notifications\u{2026}") {
+                    viewModel.requestNotificationPermission()
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
+                .font(.caption)
             }
         }
         .formStyle(.grouped)
@@ -105,103 +97,156 @@ private struct GeneralTab: View {
     }
 }
 
-// MARK: - Providers
+// MARK: - Providers (merged with Credentials)
 
 private struct ProvidersTab: View {
-    @ObservedObject var viewModel: AppViewModel
-
-    var body: some View {
-        Form {
-            Section("Enabled providers") {
-                ForEach(viewModel.providers, id: \.id) { provider in
-                    let isOn = viewModel.isProviderEnabled(provider.id)
-                    Toggle(isOn: Binding(
-                        get: { isOn },
-                        set: { newValue in
-                            viewModel.setProviderEnabled(provider.id, newValue)
-                        }
-                    )) {
-                        HStack {
-                            Image(systemName: provider.symbolName)
-                                .foregroundStyle(.secondary)
-                            VStack(alignment: .leading) {
-                                Text(provider.displayName)
-                                if !viewModel.isProviderConfigured(provider.id) {
-                                    Text("No API key set")
-                                        .font(.caption2)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Section {
-                Text("Enable a provider, then add its API key in the Credentials tab. Only enabled providers with keys appear in the menu bar popover.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .formStyle(.grouped)
-        .padding()
-    }
-}
-
-// MARK: - Credentials
-
-private struct CredentialsTab: View {
     @ObservedObject var viewModel: AppViewModel
     @AppStorage("minimax.region") private var minimaxRegion = "international"
     @AppStorage("zai.region") private var zaiRegion = "international"
 
     var body: some View {
         Form {
-            Section {
-                Text("Claude Code and Codex use OAuth credentials stored by their CLI tools. Log in with `claude` or `codex login` to enable them. No key needed here.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Kimi") {
-                SecureField("API Key", text: $viewModel.kimiKey)
-                    .onChange(of: viewModel.kimiKey) { _ in viewModel.saveKimiKey() }
-            }
-
-            Section("MiniMax") {
-                Picker("Region", selection: $minimaxRegion) {
-                    Text("International (minimax.io)").tag("international")
-                    Text("China (minimaxi.com)").tag("china")
-                }
-                SecureField("API Key", text: $viewModel.minimaxKey)
-                    .onChange(of: viewModel.minimaxKey) { _ in viewModel.saveMinimaxKey() }
-            }
-
-            Section("Z.ai (GLM)") {
-                Picker("Region", selection: $zaiRegion) {
-                    Text("International (z.ai)").tag("international")
-                    Text("China (bigmodel.cn)").tag("china")
-                }
-                SecureField("API Key", text: $viewModel.zaiKey)
-                    .onChange(of: viewModel.zaiKey) { _ in viewModel.saveZaiKey() }
-            }
-
-            Section("DeepSeek") {
-                SecureField("API Key", text: $viewModel.deepSeekKey)
-                    .onChange(of: viewModel.deepSeekKey) { _ in viewModel.saveDeepSeekKey() }
-            }
-
-            Section("OpenRouter") {
-                SecureField("API Key", text: $viewModel.openRouterKey)
-                    .onChange(of: viewModel.openRouterKey) { _ in viewModel.saveOpenRouterKey() }
-            }
-
-            Section {
-                Text("Keys are stored in the macOS Keychain, never synced, and sent only to the provider you choose.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            ForEach(viewModel.providers, id: \.id) { provider in
+                providerSection(provider)
             }
         }
         .formStyle(.grouped)
+        .padding()
+    }
+
+    @ViewBuilder
+    private func providerSection(_ provider: any AIProvider) -> some View {
+        let isOn = viewModel.isProviderEnabled(provider.id)
+        let configured = viewModel.isProviderConfigured(provider.id)
+
+        Section {
+            Toggle(isOn: Binding(
+                get: { isOn },
+                set: { newValue in viewModel.setProviderEnabled(provider.id, newValue) }
+            )) {
+                HStack {
+                    Image(systemName: provider.symbolName)
+                        .foregroundStyle(.secondary)
+                    Text(provider.displayName)
+                    if !configured {
+                        Text("No key")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+
+            // Expand config fields when enabled.
+            if isOn {
+                configFields(for: provider)
+            }
+        } header: {
+            Text(provider.displayName)
+        }
+    }
+
+    @ViewBuilder
+    private func configFields(for provider: any AIProvider) -> some View {
+        switch provider.id {
+        case "claude":
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Uses OAuth via Claude Code CLI. Run `claude` to log in.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("npm install -g @anthropic-ai/claude-code")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 20)
+
+        case "codex":
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Uses OAuth via Codex CLI. Run `codex login` to authenticate.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("npm install -g @openai/codex")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 20)
+
+        case "kimi":
+            SecureField("API Key", text: $viewModel.kimiKey)
+                .onChange(of: viewModel.kimiKey) { _ in viewModel.saveKimiKey() }
+                .padding(.leading, 20)
+
+        case "minimax":
+            Picker("Region", selection: $minimaxRegion) {
+                Text("International (minimax.io)").tag("international")
+                Text("China (minimaxi.com)").tag("china")
+            }
+            .padding(.leading, 20)
+            SecureField("API Key", text: $viewModel.minimaxKey)
+                .onChange(of: viewModel.minimaxKey) { _ in viewModel.saveMinimaxKey() }
+                .padding(.leading, 20)
+
+        case "zai":
+            Picker("Region", selection: $zaiRegion) {
+                Text("International (z.ai)").tag("international")
+                Text("China (bigmodel.cn)").tag("china")
+            }
+            .padding(.leading, 20)
+            SecureField("API Key", text: $viewModel.zaiKey)
+                .onChange(of: viewModel.zaiKey) { _ in viewModel.saveZaiKey() }
+                .padding(.leading, 20)
+
+        case "deepseek":
+            SecureField("API Key", text: $viewModel.deepSeekKey)
+                .onChange(of: viewModel.deepSeekKey) { _ in viewModel.saveDeepSeekKey() }
+                .padding(.leading, 20)
+
+        case "openrouter":
+            SecureField("API Key", text: $viewModel.openRouterKey)
+                .onChange(of: viewModel.openRouterKey) { _ in viewModel.saveOpenRouterKey() }
+                .padding(.leading, 20)
+
+        default:
+            EmptyView()
+        }
+    }
+}
+
+// MARK: - About
+
+private struct AboutTab: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+
+            Text("AIMonitor")
+                .font(.title2.bold())
+
+            Text("Version 0.1.0")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("Monitor AI service quotas from your menu bar.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 8) {
+                Link("View on GitHub", destination: URL(string: "https://github.com/mgks/AIQuota")!)
+                Link("Report an Issue", destination: URL(string: "https://github.com/mgks/AIQuota/issues")!)
+            }
+            .padding(.top, 8)
+
+            Spacer()
+
+            Text("MIT License \u{00B7} \u{00A9} 2026 Ghazi")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+
+            Spacer()
+        }
         .padding()
     }
 }

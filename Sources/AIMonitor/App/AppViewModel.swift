@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 import UserNotifications
 
 /// Owns provider state, drives refresh, and exposes everything the UI binds to.
@@ -187,6 +188,26 @@ final class AppViewModel: ObservableObject {
     }
 
     // MARK: - Notifications
+
+    /// Request notification permission. Called from General settings button.
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
+            if !granted {
+                // If denied, open System Settings so the user can enable manually.
+                DispatchQueue.main.async {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                }
+            }
+        }
+    }
+
+    /// Check if notifications are authorized (for UI display).
+    var notificationsAuthorized: Bool {
+        get async {
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            return settings.authorizationStatus == .authorized
+        }
+    }
 
     /// Check if a provider crossed a notification threshold and fire an alert.
     private func checkThresholds(for id: String, status: ProviderStatus) {
