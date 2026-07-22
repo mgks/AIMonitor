@@ -6,40 +6,39 @@ import AppKit
 /// colour to the menu bar (light/dark) automatically.
 enum MonitorMenuBarIcon {
     static let image: NSImage = {
-        // Apple menu bar icons target ~18pt visually. Render at 2x for retina.
+        // Menu bar icon: simplified circle + bar + needle, matching the app icon.
         let renderSize: CGFloat = 40
         let displaySize: CGFloat = 20
         let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
 
         let s = renderSize
-        let lw = s * 0.064    // a few micro pixels thicker for visibility
+        let cx = s * 0.5
+        let cy = s * 0.5
+        let r = s * 0.375
+        let lw = s * 0.058
 
-        // Rounded rect outline. Fill ~73% of frame like native icons.
-        let inset = s * 0.135
-        let rect = NSRect(x: inset, y: inset,
-                          width: s - 2 * inset, height: s - 2 * inset)
-        let path = NSBezierPath(roundedRect: rect, xRadius: s * 0.12, yRadius: s * 0.12)
-        path.lineWidth = lw
-        path.lineJoinStyle = .round
-        path.stroke()
+        // Circle outline.
+        let circle = NSBezierPath(ovalIn: NSRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+        circle.lineWidth = lw
+        circle.stroke()
 
-        // Graph bump inside the frame.
-        let bump = NSBezierPath()
-        let baseY = s * 0.56
-        let peakY = s * 0.38
-        bump.move(to: NSPoint(x: s * 0.31, y: baseY))
-        bump.line(to: NSPoint(x: s * 0.38, y: baseY))
-        bump.curve(to: NSPoint(x: s * 0.5, y: peakY),
-                   controlPoint1: NSPoint(x: s * 0.43, y: baseY),
-                   controlPoint2: NSPoint(x: s * 0.43, y: baseY))
-        bump.curve(to: NSPoint(x: s * 0.62, y: baseY),
-                   controlPoint1: NSPoint(x: s * 0.57, y: peakY),
-                   controlPoint2: NSPoint(x: s * 0.57, y: peakY))
-        bump.line(to: NSPoint(x: s * 0.69, y: baseY))
-        bump.lineWidth = lw
-        bump.lineCapStyle = .round
-        bump.stroke()
+        // Horizontal bar.
+        let barY = cy - r * 0.35
+        let bar = NSBezierPath()
+        bar.move(to: NSPoint(x: cx - r * 0.85, y: barY))
+        bar.line(to: NSPoint(x: cx + r * 0.85, y: barY))
+        bar.lineWidth = lw
+        bar.lineCapStyle = .round
+        bar.stroke()
+
+        // Diagonal needle.
+        let needle = NSBezierPath()
+        needle.move(to: NSPoint(x: cx - r * 0.25, y: cy + r * 0.05))
+        needle.line(to: NSPoint(x: cx + r * 0.5, y: cy + r * 0.7))
+        needle.lineWidth = lw
+        needle.lineCapStyle = .round
+        needle.stroke()
 
         img.unlockFocus()
         img.isTemplate = true    // adaptive colour for light/dark menu bar
@@ -56,8 +55,8 @@ struct MenuBarLabel: View {
         HStack(spacing: 4) {
             Image(nsImage: MonitorMenuBarIcon.image)
             if viewModel.showSummary, let row = viewModel.summaryRow {
-                Text("\(row.shortName) \(Formatting.percent(row.percent) ?? "")")
-                    .font(.system(size: 11, weight: .medium))
+                Text(Formatting.percent(row.percent) ?? "")
+                    .font(.system(size: 10, weight: .medium))
                     .monospacedDigit()
                     .foregroundStyle(colour(for: row.state))
             }

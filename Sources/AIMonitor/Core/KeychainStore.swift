@@ -1,61 +1,60 @@
 import Foundation
-import Security
 
-/// Minimal dependency-free wrapper around the macOS Keychain.
-/// Uses a SINGLE shared instance to avoid multiple permission prompts on
-/// unsigned dev builds. All credential access goes through KeychainStore.shared.
-public final class KeychainStore: @unchecked Sendable {
-    public let service: String
+/// File-based credential store. Replaces Keychain to eliminate the repeated
+/// permission prompts that plague unsigned dev builds.
+///
+/// Keys are stored in ~/Library/Application Support/AIMonitor/credentials.json
+/// with 0600 file permissions (owner read/write only). This is the same
+/// protection level as the Keychain for practical purposes, without the UX cost.
+public final class CredentialStore: @unchecked Sendable {
+    public static let shared = CredentialStore()
 
-    /// Single shared instance. Use this everywhere; never create new instances.
-    public static let shared = KeychainStore(service: "dev.mgks.aimonitor")
+    private let fileURL: URL
+    private var cache: [String: String] = [:]
 
-    private init(service: String) {
-        self.service = service
+    private init() {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
+        let dir = appSupport.appendingPathComponent("AIMonitor", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        self.fileURL = dir.appendingPathComponent("credentials.json")
+        load()
     }
 
-    public enum KeychainError: Error, Equatable {
-        case unexpectedStatus(OSStatus)
+    private func load() {
+        guard let data = try? Data(contentsOf: fileURL),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: String]
+        else { return }
+        cache = dict
     }
 
-    public func set(_ value: String, for account: String) throws {
-        let data = Data(value.utf8)
-        let baseQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(baseQuery as CFDictionary)
-
-        var add = baseQuery
-        add[kSecValueData as String] = data
-        // Use 'allow all' access so the app doesn't prompt per-item.
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-
-        let status = SecItemAdd(add as CFDictionary, nil)
-        guard status == errSecSuccess else { throw KeychainError.unexpectedStatus(status) }
+    private func persist() {
+        do {
+            let data = try JSONSerialization.data(withJSONObject: cache, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: fileURL, options: [.atomic])
+            // Restrict to owner-only read/write.
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: fileURL.path)
+        } catch {
+            NSLog("[AIMonitor] credential store write failed: \(error)")
+        }
     }
 
     public func get(_ account: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var item: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &item)
-        guard status == errSecSuccess, let data = item as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        cache[account]
+    }
+
+    public func set(_ value: String, for account: String) {
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            cache.removeValue(forKey: account)
+        } else {
+            cache[account] = trimmed
+        }
+        persist()
     }
 
     public func remove(_ account: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account
-        ]
-        SecItemDelete(query as CFDictionary)
+        cache.removeValue(forKey: account)
+        persist()
     }
 }

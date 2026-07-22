@@ -1,16 +1,15 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 /// Owns provider state, drives refresh, and exposes everything the UI binds to.
 /// Credential strings live directly here as @Published so SwiftUI bindings
-/// ($viewModel.minimaxKey) propagate reliably. Nested ObservableObjects break
-/// onChange in this SDK; flattening avoids that entirely.
+/// propagate reliably. Keys are stored via CredentialStore (file-based, no
+/// keychain prompts ever).
 @MainActor
 final class AppViewModel: ObservableObject {
 
-    // MARK: - Credentials (flat @Published for reliable SwiftUI binding)
-    // All credential strings are loaded once at init from the shared KeychainStore
-    // and saved back through it. One keychain prompt for all keys, not per-key.
+    // MARK: - Credentials
 
     @Published public var minimaxKey: String = ""
     @Published public var zaiKey: String = ""
@@ -44,11 +43,8 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    /// Generic key saver used by all API-key providers.
     func saveKey(_ value: String, account: String) {
-        let trimmed = value.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty { KeychainStore.shared.remove(account) }
-        else { try? KeychainStore.shared.set(trimmed, for: account) }
+        CredentialStore.shared.set(value, for: account)
         refreshAll()
     }
 
@@ -66,24 +62,30 @@ final class AppViewModel: ObservableObject {
     @Published public private(set) var lastRefresh: Date?
     @Published public var refreshInterval: TimeInterval = AppSettings.defaultRefreshInterval
     @Published public var showSummary: Bool = UserDefaults.standard.bool(forKey: AppSettings.Keys.showSummary)
+    @Published public var summaryMode: String = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryMode) ?? "remaining"
+
+    /// Tracks the last known percent per provider to detect threshold crossings.
+    private var lastPercent: [String: Double] = [:]
 
     public let providers: [any AIProvider]
     private let http = HTTPClient()
     private var scheduler: RefreshScheduler?
 
     public init() {
-        // Load ALL keys once from the shared KeychainStore. One prompt total.
-        let kc = KeychainStore.shared
-        self.minimaxKey = kc.get("minimax.apiKey") ?? ""
-        self.zaiKey = kc.get("zai.apiKey") ?? ""
-        self.kimiKey = kc.get("kimi.apiKey") ?? ""
-        self.deepSeekKey = kc.get("deepseek.apiKey") ?? ""
-        self.openRouterKey = kc.get("openrouter.apiKey") ?? ""
+        let cs = CredentialStore.shared
+        self.minimaxKey = cs.get("minimax.apiKey") ?? ""
+        self.zaiKey = cs.get("zai.apiKey") ?? ""
+        self.kimiKey = cs.get("kimi.apiKey") ?? ""
+        self.deepSeekKey = cs.get("deepseek.apiKey") ?? ""
+        self.openRouterKey = cs.get("openrouter.apiKey") ?? ""
 
-        self.providers = ProviderRegistry.makeDefault(http: http, secrets: KeychainStore.shared)
+        self.providers = ProviderRegistry.makeDefault(http: http, secrets: CredentialStore.shared)
         self.scheduler = RefreshScheduler(interval: AppSettings.defaultRefreshInterval) { [weak self] in
             self?.refreshAll()
         }
+
+        // Request notification permission on first launch.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     public func start() {
@@ -98,7 +100,6 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Active providers
 
-    /// Providers that are both enabled in prefs AND have credentials entered.
     public var activeProviders: [any AIProvider] {
         providers.filter { isProviderActive($0.id) }
     }
@@ -122,7 +123,7 @@ final class AppViewModel: ObservableObject {
 
     func isProviderEnabled(_ id: String) -> Bool {
         if let override = enabledOverrides[id] { return override }
-        return isProviderConfigured(id)   // default ON when key present
+        return isProviderConfigured(id)
     }
 
     func setProviderEnabled(_ id: String, _ on: Bool) {
@@ -147,8 +148,6 @@ final class AppViewModel: ObservableObject {
         let targets = activeProviders
         guard !targets.isEmpty else { return }
 
-        // Build a key lookup from the in-memory cached keys.
-        // This avoids ANY keychain access during refresh.
         let keyMap: [String: String] = [
             "minimax": minimaxKey,
             "zai": zaiKey,
@@ -176,6 +175,7 @@ final class AppViewModel: ObservableObject {
                     if let status {
                         self.statuses[id] = status
                         self.errors.removeValue(forKey: id)
+                        self.checkThresholds(for: id, status: status)
                     } else if let error {
                         self.errors[id] = error
                     }
@@ -186,9 +186,53 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Notifications
+
+    /// Check if a provider crossed a notification threshold and fire an alert.
+    private func checkThresholds(for id: String, status: ProviderStatus) {
+        guard let pct = status.snapshot.remainingPercent else { return }
+        let prev = lastPercent[id]
+        lastPercent[id] = pct
+
+        let name = status.displayName
+        let notifyUnder20 = UserDefaults.standard.bool(forKey: AppSettings.Keys.notifyUnder20)
+        let notifyUnder10 = UserDefaults.standard.bool(forKey: AppSettings.Keys.notifyUnder10)
+        let notifyExhausted = UserDefaults.standard.bool(forKey: AppSettings.Keys.notifyExhausted)
+
+        // Only notify on the DOWNWARD crossing (was above, now below).
+        if let prev, prev > pct {
+            if pct <= 0 && notifyExhausted {
+                fireNotification(title: "\(name)", body: "Quota exhausted. No requests remaining.")
+            } else if pct < 10 && prev >= 10 && notifyUnder10 {
+                fireNotification(title: "\(name)", body: "Only \(Int(pct))% remaining.")
+            } else if pct < 20 && prev >= 20 && notifyUnder20 {
+                fireNotification(title: "\(name)", body: "Under 20% remaining (\(Int(pct))%).")
+            }
+        }
+
+        // Notify on upward crossing (quota reset/restored).
+        let notifyReset = UserDefaults.standard.bool(forKey: AppSettings.Keys.notifyReset)
+        if let prev, prev < pct, prev <= 5, pct > 20, notifyReset {
+            fireNotification(title: "\(name)", body: "Quota reset. \(Int(pct))% available again.")
+        }
+    }
+
+    private func fireNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
+
     // MARK: - Summary (single selected provider)
 
-    /// Which provider to show in the menu bar summary. Defaults to first active.
     var summaryProviderID: String {
         let stored = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryProvider) ?? ""
         if !stored.isEmpty { return stored }
@@ -200,12 +244,11 @@ final class AppViewModel: ObservableObject {
         objectWillChange.send()
     }
 
-    /// The single summary row for the menu bar label.
-    struct SummaryRow: Identifiable {
-        let id: String
-        let shortName: String
-        let percent: Double
-        let state: QuotaState
+    /// Toggle summaryMode and persist immediately so the menu bar updates.
+    func setSummaryMode(_ mode: String) {
+        summaryMode = mode
+        UserDefaults.standard.set(mode, forKey: AppSettings.Keys.summaryMode)
+        objectWillChange.send()
     }
 
     var summaryRow: SummaryRow? {
@@ -213,8 +256,7 @@ final class AppViewModel: ObservableObject {
         guard !id.isEmpty,
               let status = statuses[id],
               let pct = status.snapshot.remainingPercent else { return nil }
-        let showUsed = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryMode) ?? "remaining" == "used"
-        let displayed = showUsed ? 100 - pct : pct
+        let displayed = summaryMode == "used" ? 100 - pct : pct
         return SummaryRow(
             id: id,
             shortName: status.shortName,
@@ -223,17 +265,11 @@ final class AppViewModel: ObservableObject {
         )
     }
 
-    /// Legacy single headline percent (worst case), kept for compatibility.
-    public var summaryPercent: Double? {
-        let pcts = activeProviders.compactMap { statuses[$0.id]?.snapshot.remainingPercent }
-        guard !pcts.isEmpty else { return nil }
-
-        let showUsed = UserDefaults.standard.string(forKey: AppSettings.Keys.summaryMode) ?? "remaining" == "used"
-        if showUsed {
-            return pcts.map { 100 - $0 }.max()
-        } else {
-            return pcts.min()
-        }
+    struct SummaryRow: Identifiable {
+        let id: String
+        let shortName: String
+        let percent: Double
+        let state: QuotaState
     }
 
     public var worstState: QuotaState {

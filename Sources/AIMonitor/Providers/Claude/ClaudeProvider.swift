@@ -38,7 +38,7 @@ final class ClaudeProvider: AIProvider {
     private static let refreshURL = URL(string: "https://platform.claude.com/api/oauth_token")!
     private static let clientID = "9d1c250a-e61b-44a4-915c-c4050d2f7d5d"
 
-    init(http: HTTPClient, secrets: KeychainStore) {
+    init(http: HTTPClient, secrets: CredentialStore) {
         self.http = http
     }
 

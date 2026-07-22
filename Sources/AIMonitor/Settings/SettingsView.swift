@@ -70,7 +70,10 @@ private struct GeneralTab: View {
                             Text(provider.displayName).tag(provider.id)
                         }
                     }
-                    Picker("Display mode", selection: $summaryMode) {
+                    Picker("Display mode", selection: Binding(
+                        get: { viewModel.summaryMode },
+                        set: { viewModel.setSummaryMode($0) }
+                    )) {
                         ForEach(AppSettings.summaryModes, id: \.self) {
                             Text($0.capitalized).tag($0)
                         }

@@ -26,7 +26,7 @@ final class CodexProvider: AIProvider {
     private static let refreshURL = URL(string: "https://auth.openai.com/oauth/token")!
     private static let clientID = "app_EMoamEEZ73f0CkXaXp7hrann"
 
-    init(http: HTTPClient, secrets: KeychainStore) {
+    init(http: HTTPClient, secrets: CredentialStore) {
         self.http = http
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 // Renders AIMonitor's app icon programmatically with CoreGraphics.
-// Flat white background, dark rounded-rect outline, magenta graph line.
-// No SVG loading, no shadows, no gradients: guaranteed flat output.
+// Design: circle outline + horizontal bar + diagonal needle (teal on light-blue).
+// Flat, no shadows. Matches the monitor-icon SVG source.
 //
 // Usage: swift scripts/render-icon.swift <output-iconset-dir>
 
@@ -23,47 +23,47 @@ let sizes: [(name: String, pixels: Int)] = [
     ("icon_512x512", 512), ("icon_512x512@2x", 1024)
 ]
 
+// Colors from the SVG: fill #006d8f, bg #caf0fe
+let tealColor = CGColor(red: 0.0, green: 0.427, blue: 0.561, alpha: 1)
+let lightBlue = CGColor(red: 0.792, green: 0.941, blue: 0.996, alpha: 1)
+
 func drawIcon(into ctx: CGContext, size: CGFloat) {
     let s = size
 
-    // Flat white background filling the entire canvas.
-    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-    ctx.fill(CGRect(x: 0, y: 0, width: s, height: s))
+    // Rounded rect background (light blue).
+    let cornerR = s * 0.225
+    let bgPath = CGMutablePath()
+    bgPath.addRoundedRect(in: CGRect(x: 0, y: 0, width: s, height: s),
+                          cornerWidth: cornerR, cornerHeight: cornerR)
+    ctx.addPath(bgPath)
+    ctx.setFillColor(lightBlue)
+    ctx.fillPath()
 
-    // Rounded rect outline: dark grey, flat, no shadow.
-    let inset = s * 0.103
-    let rect = CGRect(x: inset, y: inset,
-                      width: s - 2 * inset, height: s - 2 * inset)
-    let frame = CGMutablePath()
-    frame.addRoundedRect(in: rect, cornerWidth: s * 0.158,
-                         cornerHeight: s * 0.158)
-    ctx.addPath(frame)
-    ctx.setStrokeColor(CGColor(red: 0.165, green: 0.165, blue: 0.165, alpha: 1))
-    ctx.setLineWidth(s * 0.0583)
-    ctx.setLineCap(.round)
-    ctx.setLineJoin(.round)
+    // Circle outline (teal).
+    let cx = s * 0.5
+    let cy = s * 0.5
+    let r = s * 0.375
+    ctx.setStrokeColor(tealColor)
+    ctx.setLineWidth(s * 0.067)
+    ctx.addEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
     ctx.strokePath()
 
-    // Magenta graph bump line: up-over-down shape.
-    let line = CGMutablePath()
-    let baseY = s * 0.517
-    let peakY = s * 0.413
-    line.move(to: CGPoint(x: s * 0.302, y: baseY))
-    line.addLine(to: CGPoint(x: s * 0.404, y: baseY))
-    line.addQuadCurve(
-        to: CGPoint(x: s * 0.5, y: peakY),
-        control: CGPoint(x: s * 0.453, y: baseY)
-    )
-    line.addQuadCurve(
-        to: CGPoint(x: s * 0.596, y: baseY),
-        control: CGPoint(x: s * 0.547, y: peakY)
-    )
-    line.addLine(to: CGPoint(x: s * 0.698, y: baseY))
-    ctx.addPath(line)
-    ctx.setStrokeColor(CGColor(red: 0.875, green: 0.078, blue: 0.388, alpha: 1))
-    ctx.setLineWidth(s * 0.0583)
+    // Horizontal bar near bottom of circle.
+    let barY = cy - r * 0.35
+    ctx.move(to: CGPoint(x: cx - r * 0.85, y: barY))
+    ctx.addLine(to: CGPoint(x: cx + r * 0.85, y: barY))
+    ctx.setLineWidth(s * 0.067)
     ctx.setLineCap(.round)
-    ctx.setLineJoin(.round)
+    ctx.strokePath()
+
+    // Diagonal needle: from lower-left going up to upper-right.
+    // Matches the SVG path: starts near (0.4, 0.6), ends near (0.7, 0.2).
+    let needle = CGMutablePath()
+    needle.move(to: CGPoint(x: cx - r * 0.25, y: cy + r * 0.05))
+    needle.addLine(to: CGPoint(x: cx + r * 0.5, y: cy + r * 0.7))
+    ctx.addPath(needle)
+    ctx.setLineWidth(s * 0.067)
+    ctx.setLineCap(.round)
     ctx.strokePath()
 }
 
@@ -78,7 +78,6 @@ for spec in sizes {
         FileHandle.standardError.write("context failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
-    // Disable anti-aliasing on strokes for crisp pixel edges at small sizes.
     ctx.setShouldAntialias(pixels >= 64)
     drawIcon(into: ctx, size: CGFloat(pixels))
 

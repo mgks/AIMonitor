@@ -6,7 +6,7 @@ public enum ProviderRegistry {
 
     /// The default provider set, ordered by popularity. New providers plug in here only.
     @MainActor
-    public static func makeDefault(http: HTTPClient, secrets: KeychainStore) -> [any AIProvider] {
+    public static func makeDefault(http: HTTPClient, secrets: CredentialStore) -> [any AIProvider] {
         [
             // OAuth-based coding plans (most popular, read CLI credentials).
             ClaudeProvider(http: http, secrets: secrets),

@@ -15,7 +15,7 @@ final class KimiProvider: AIProvider {
 
     private let http: HTTPClient
 
-    init(http: HTTPClient, secrets: KeychainStore) {
+    init(http: HTTPClient, secrets: CredentialStore) {
         self.http = http
     }
 
