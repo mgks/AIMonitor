@@ -5,38 +5,41 @@ import AppKit
 /// show a custom shape in a MenuBarExtra label. Template images adapt their
 /// colour to the menu bar (light/dark) automatically.
 enum MonitorMenuBarIcon {
-    /// Template image drawn from the SVG glyph: circle + bar + needle.
+    /// Template image drawn with CoreGraphics paths (no SVG, no halos).
     static let image: NSImage = {
-        let svg = """
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="40" height="40">
-          <g fill="black">
-            <path d="M12,24C5.4,24,0,18.6,0,12S5.4,0,12,0s12,5.4,12,12S18.6,24,12,24z M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z"/>
-            <rect x="2" y="16" width="20" height="2"/>
-            <path d="M12,18c-0.2,0-0.3,0-0.5-0.1c-0.5-0.3-0.6-0.9-0.4-1.4l5-8.7c0.3-0.5,0.9-0.6,1.4-0.4c0.5,0.3,0.6,0.9,0.4,1.4l-5,8.7C12.7,17.8,12.3,18,12,18z"/>
-          </g>
-        </svg>
-        """
-        let temp = "/tmp/aistat-menubar-glyph.svg"
-        try? svg.write(toFile: temp, atomically: true, encoding: .utf8)
-        guard let svgImage = NSImage(contentsOfFile: temp) else {
-            // Fallback: simple circle.
-            let fallback = NSImage(size: NSSize(width: 20, height: 20))
-            fallback.lockFocus()
-            NSBezierPath(ovalIn: NSRect(x: 4, y: 4, width: 12, height: 12)).stroke()
-            fallback.unlockFocus()
-            fallback.isTemplate = true
-            return fallback
-        }
-        // Render at 4x display size then downscale for crisp, thin edges.
-        let renderSize: CGFloat = 52
-        let displaySize: CGFloat = 13
-        let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
+        let size: CGFloat = 18    // standard menu bar icon size
+        let img = NSImage(size: NSSize(width: size, height: size))
         img.lockFocus()
-        svgImage.draw(in: NSRect(x: 0, y: 0, width: renderSize, height: renderSize),
-                      from: .zero, operation: .copy, fraction: 1.0)
+
+        let cx = size * 0.5
+        let cy = size * 0.5
+        let r = size * 0.36
+        let lw = size * 0.06
+
+        // Circle outline.
+        let circle = NSBezierPath(ovalIn: NSRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+        circle.lineWidth = lw
+        circle.stroke()
+
+        // Horizontal bar.
+        let barY = cy - r * 0.33
+        let bar = NSBezierPath()
+        bar.move(to: NSPoint(x: cx - r * 0.83, y: barY))
+        bar.line(to: NSPoint(x: cx + r * 0.83, y: barY))
+        bar.lineWidth = lw
+        bar.lineCapStyle = .round
+        bar.stroke()
+
+        // Diagonal needle.
+        let needle = NSBezierPath()
+        needle.move(to: NSPoint(x: cx - r * 0.25, y: cy + r * 0.05))
+        needle.line(to: NSPoint(x: cx + r * 0.5, y: cy + r * 0.67))
+        needle.lineWidth = lw
+        needle.lineCapStyle = .round
+        needle.stroke()
+
         img.unlockFocus()
         img.isTemplate = true
-        img.size = NSSize(width: displaySize, height: displaySize)
         return img
     }()
 }

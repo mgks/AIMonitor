@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
-// Renders AIMonitor's app icon from the SVG source via NSImage.
-// Uses macOS native SVG rasterisation for faithful vector rendering.
-// Background added in code (light-blue rounded rect matching the -bg SVG).
+// Renders AIMonitor's app icon with direct CoreGraphics path drawing.
+// No SVG rasterization = no anti-aliasing halos or shadow artifacts.
+// Pure flat: white bg, teal paths.
 //
 // Usage: swift scripts/render-icon.swift <output-iconset-dir>
 
@@ -23,90 +23,75 @@ let sizes: [(name: String, pixels: Int)] = [
     ("icon_512x512", 512), ("icon_512x512@2x", 1024)
 ]
 
-// The SVG glyph (no background, just the monitor shape) in teal.
-let svgGlyph = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="256" height="256">
-  <g fill="#006d8f">
-    <path d="M12,24C5.4,24,0,18.6,0,12S5.4,0,12,0s12,5.4,12,12S18.6,24,12,24z M12,2C6.5,2,2,6.5,2,12s4.5,10,10,10s10-4.5,10-10S17.5,2,12,2z"/>
-    <rect x="2" y="16" width="20" height="2"/>
-    <path d="M12,18c-0.2,0-0.3,0-0.5-0.1c-0.5-0.3-0.6-0.9-0.4-1.4l5-8.7c0.3-0.5,0.9-0.6,1.4-0.4c0.5,0.3,0.6,0.9,0.4,1.4l-5,8.7C12.7,17.8,12.3,18,12,18z"/>
-  </g>
-</svg>
-"""
+let teal = CGColor(red: 0.0, green: 0.427, blue: 0.561, alpha: 1)
 
-// Write the glyph SVG to a temp file for NSImage to load.
-let tempSVG = "/tmp/aistat-glyph.svg"
-try svgGlyph.write(toFile: tempSVG, atomically: true, encoding: .utf8)
-let svgURL = URL(fileURLWithPath: tempSVG)
-guard let glyphImage = NSImage(contentsOf: svgURL) else {
-    FileHandle.standardError.write("could not load glyph SVG\n".data(using: .utf8)!)
-    exit(1)
+func drawIcon(into ctx: CGContext, size: CGFloat) {
+    let s = size
+
+    // White rounded rect background.
+    let cornerR = s * 0.225
+    let bgPath = CGMutablePath()
+    bgPath.addRoundedRect(in: CGRect(x: 0, y: 0, width: s, height: s),
+                          cornerWidth: cornerR, cornerHeight: cornerR)
+    ctx.addPath(bgPath)
+    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+    ctx.fillPath()
+
+    // Center the gauge in the icon with ~20% padding on all sides.
+    let inset = s * 0.2
+    let gx = inset
+    let gy = inset
+    let gw = s - 2 * inset
+    let gh = s - 2 * inset
+    let gcx = gx + gw / 2
+    let gcy = gy + gh / 2
+    let gr = gw * 0.42
+    let lw = s * 0.045
+
+    ctx.setStrokeColor(teal)
+    ctx.setFillColor(teal)
+    ctx.setLineWidth(lw)
+    ctx.setLineCap(.round)
+    ctx.setLineJoin(.round)
+
+    // 1. Circle outline (the gauge dial).
+    let circleRect = CGRect(x: gcx - gr, y: gcy - gr, width: gr * 2, height: gr * 2)
+    ctx.addEllipse(in: circleRect)
+    ctx.strokePath()
+
+    // 2. Horizontal bar near the bottom of the circle.
+    let barY = gcy - gr * 0.33
+    ctx.move(to: CGPoint(x: gcx - gr * 0.83, y: barY))
+    ctx.addLine(to: CGPoint(x: gcx + gr * 0.83, y: barY))
+    ctx.strokePath()
+
+    // 3. Diagonal needle from lower-left up to upper-right.
+    ctx.move(to: CGPoint(x: gcx - gr * 0.25, y: gcy + gr * 0.05))
+    ctx.addLine(to: CGPoint(x: gcx + gr * 0.5, y: gcy + gr * 0.67))
+    ctx.strokePath()
 }
 
 for spec in sizes {
     let pixels = spec.pixels
-    // Render at 4x then downscale for clean anti-aliased edges, no halos.
-    let renderRes = pixels * 4
-    guard let rep = NSBitmapImageRep(
-        bitmapDataPlanes: nil,
-        pixelsWide: renderRes,
-        pixelsHigh: renderRes,
-        bitsPerSample: 8,
-        samplesPerPixel: 4,
-        hasAlpha: true,
-        isPlanar: false,
-        colorSpaceName: .deviceRGB,
-        bytesPerRow: 0,
-        bitsPerPixel: 0
-    ) else {
-        FileHandle.standardError.write("bitmap rep failed for \(spec.name)\n".data(using: .utf8)!)
+    guard let cs = CGColorSpace(name: CGColorSpace.sRGB),
+          let ctx = CGContext(data: nil, width: pixels, height: pixels,
+                              bitsPerComponent: 8, bytesPerRow: 0,
+                              space: cs,
+                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    else {
+        FileHandle.standardError.write("context failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
-    rep.size = NSSize(width: renderRes, height: renderRes)
+    // Full antialiasing for smooth strokes.
+    ctx.setShouldAntialias(true)
+    drawIcon(into: ctx, size: CGFloat(pixels))
 
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-    NSGraphicsContext.current?.imageInterpolation = .none
-
-    // Flat white rounded rect background (no teal, no gradient, no shadow).
-    let cornerR = CGFloat(renderRes) * 0.225
-    let bgPath = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: renderRes, height: renderRes),
-                              xRadius: cornerR, yRadius: cornerR)
-    NSColor.white.setFill()
-    bgPath.fill()
-
-    // Draw the glyph SVG centered with generous padding (~75% of icon).
-    let inset = CGFloat(renderRes) * 0.125
-    glyphImage.draw(in: NSRect(x: inset, y: inset,
-                               width: CGFloat(renderRes) - 2 * inset,
-                               height: CGFloat(renderRes) - 2 * inset),
-                    from: .zero, operation: .sourceOver, fraction: 1.0)
-    NSGraphicsContext.restoreGraphicsState()
-
-    // Downscale to target resolution with high quality interpolation.
-    guard let downscaled = NSBitmapImageRep(
-        bitmapDataPlanes: nil,
-        pixelsWide: pixels,
-        pixelsHigh: pixels,
-        bitsPerSample: 8,
-        samplesPerPixel: 4,
-        hasAlpha: true,
-        isPlanar: false,
-        colorSpaceName: .deviceRGB,
-        bytesPerRow: 0,
-        bitsPerPixel: 0
-    ) else {
-        FileHandle.standardError.write("downscale failed for \(spec.name)\n".data(using: .utf8)!)
+    guard let img = ctx.makeImage() else {
+        FileHandle.standardError.write("render failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
-    downscaled.size = NSSize(width: pixels, height: pixels)
-    NSGraphicsContext.saveGraphicsState()
-    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: downscaled)
-    NSGraphicsContext.current?.imageInterpolation = .high
-    rep.draw(in: NSRect(x: 0, y: 0, width: pixels, height: pixels))
-    NSGraphicsContext.restoreGraphicsState()
-
-    guard let png = downscaled.representation(using: .png, properties: [:]) else {
+    let bmp = NSBitmapImageRep(cgImage: img)
+    guard let png = bmp.representation(using: .png, properties: [:]) else {
         FileHandle.standardError.write("png encode failed for \(spec.name)\n".data(using: .utf8)!)
         exit(1)
     }
