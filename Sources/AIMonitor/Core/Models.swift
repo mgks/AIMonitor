@@ -25,7 +25,8 @@ public enum QuotaState: String, Codable, Sendable {
 /// A single normalised quota signal produced by a provider.
 /// Built from official APIs, rate-limit headers, or balance endpoints.
 public struct QuotaSnapshot: Codable, Sendable, Equatable {
-    public var remainingPercent: Double?      // 0...100
+    public var remainingPercent: Double?      // 0...100 (headline: tighter window)
+    public var weeklyRemainingPercent: Double?  // weekly window remaining (separate)
     public var remainingRequests: Int?
     public var totalRequests: Int?
     public var remainingTokens: Int?
@@ -39,6 +40,7 @@ public struct QuotaSnapshot: Codable, Sendable, Equatable {
 
     public init(
         remainingPercent: Double? = nil,
+        weeklyRemainingPercent: Double? = nil,
         remainingRequests: Int? = nil,
         totalRequests: Int? = nil,
         remainingTokens: Int? = nil,

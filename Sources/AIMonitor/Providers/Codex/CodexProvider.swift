@@ -140,6 +140,7 @@ final class CodexProvider: AIProvider {
 
         let snapshot = QuotaSnapshot(
             remainingPercent: headline,
+            weeklyRemainingPercent: sevenDayRemaining,
             resetsAt: fiveHour?.resetsInSeconds.map { Date().addingTimeInterval(TimeInterval($0)) },
             weeklyResetsAt: sevenDay?.resetsInSeconds.map { Date().addingTimeInterval(TimeInterval($0)) },
             windowLabel: "5h + Weekly",

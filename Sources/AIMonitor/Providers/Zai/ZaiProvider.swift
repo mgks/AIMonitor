@@ -115,6 +115,7 @@ final class ZaiProvider: AIProvider {
 
         var snapshot = QuotaSnapshot(
             remainingPercent: headline,
+            weeklyRemainingPercent: weeklyRemaining,
             resetsAt: dateFromMs(fiveHourLimit?.nextResetTime),
             weeklyResetsAt: dateFromMs(weeklyLimit?.nextResetTime),
             windowLabel: "5h + Weekly",

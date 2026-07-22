@@ -98,6 +98,7 @@ final class KimiProvider: AIProvider {
 
         let snapshot = QuotaSnapshot(
             remainingPercent: headline,
+            weeklyRemainingPercent: weeklyPct,
             resetsAt: parseISO(fiveHourDetail?.resetTime),
             weeklyResetsAt: parseISO(weekly?.resetTime),
             windowLabel: "5h + Weekly",

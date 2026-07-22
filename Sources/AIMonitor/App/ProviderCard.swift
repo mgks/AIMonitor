@@ -65,11 +65,11 @@ struct ProviderCard: View {
         }
 
         let fiveHourPct = snapshot.remainingPercent
-        let weeklyPct = weeklyRemainingPct(snapshot)
+        let weeklyPct = snapshot.weeklyRemainingPercent
 
         return AnyView(
             HStack(spacing: 8) {
-                // 5-hour window
+                // 5-hour window - bar fills available width
                 if let pct = fiveHourPct {
                     windowSegment(label: "5h", pct: pct)
                 }
@@ -80,21 +80,20 @@ struct ProviderCard: View {
                         .foregroundStyle(.tertiary)
                     windowSegment(label: "W", pct: wpct)
                 }
-                Spacer()
+                Spacer(minLength: 0)
             }
         )
     }
 
     /// One labelled window: "5h [bar] 81%"
+    /// Bar expands to fill available space.
     private func windowSegment(label: String, pct: Double) -> some View {
         HStack(spacing: 4) {
             Text(label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.secondary)
-                .frame(width: 16, alignment: .leading)
             ProgressView(value: pct, total: 100)
                 .progressViewStyle(.linear)
-                .frame(width: 44)
                 .tint(tint(for: pct))
             Text(Formatting.percent(pct) ?? "")
                 .font(.system(size: 11, weight: .medium))
@@ -120,12 +119,13 @@ struct ProviderCard: View {
         var lines: [String] = []
 
         // Combine reset countdowns into one line with pipe separator.
+        // Wording: "Resets in 3h 15m | Weekly reset in 3d 2h"
         var resets: [String] = []
         if let reset = Formatting.countdown(to: snapshot.resetsAt) {
-            resets.append("5h in \(reset)")
+            resets.append("Resets in \(reset)")
         }
         if let weekly = Formatting.countdown(to: snapshot.weeklyResetsAt) {
-            resets.append("W in \(weekly)")
+            resets.append("Weekly reset in \(weekly)")
         }
         if !resets.isEmpty {
             lines.append(resets.joined(separator: " | "))
@@ -143,15 +143,6 @@ struct ProviderCard: View {
         }
 
         return lines
-    }
-
-    /// Extract a weekly remaining percentage from the snapshot's weekly reset
-    /// presence. Since we don't store weekly percent separately, we infer from
-    /// the headline: if a weekly window exists, show the same percent (the
-    /// headline already picks the tighter window). This is conservative.
-    private func weeklyRemainingPct(_ snapshot: QuotaSnapshot) -> Double? {
-        guard snapshot.weeklyResetsAt != nil else { return nil }
-        return snapshot.remainingPercent
     }
 
     private var stateLabel: String {

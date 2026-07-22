@@ -114,6 +114,11 @@ struct MenuBarContent: View {
         .padding(.top, 4)
         .padding(.bottom, 4)
         .frame(width: 280)
+        .task {
+            // Auto-refresh on launch. This fires once when the popover's
+            // content view first appears (the app starts with the menu bar item).
+            viewModel.start()
+        }
     }
 
     private var header: some View {

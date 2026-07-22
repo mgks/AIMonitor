@@ -137,6 +137,7 @@ final class ClaudeProvider: AIProvider {
 
         let snapshot = QuotaSnapshot(
             remainingPercent: headline,
+            weeklyRemainingPercent: sevenDayRemaining,
             resetsAt: fiveHour?.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
             weeklyResetsAt: sevenDay?.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0) / 1000) },
             windowLabel: planLabel(from: creds),

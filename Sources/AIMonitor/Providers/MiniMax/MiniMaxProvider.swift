@@ -137,6 +137,7 @@ final class MiniMaxProvider: AIProvider {
 
         let snapshot = QuotaSnapshot(
             remainingPercent: headline,
+            weeklyRemainingPercent: weeklyPct,
             resetsAt: dateFromMs(bucket.endTime),
             weeklyResetsAt: weeklyActive ? dateFromMs(bucket.weeklyEndTime) : nil,
             windowLabel: windowLabel(hasWeekly: weeklyActive),
