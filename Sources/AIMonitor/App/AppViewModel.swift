@@ -85,8 +85,10 @@ final class AppViewModel: ObservableObject {
             self?.refreshAll()
         }
 
-        // Request notification permission on first launch.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // Activate the app so macOS registers it with the notification system.
+        // Without activation, unsigned menu-bar apps don't appear in System Settings > Notifications.
+        NSApp.activate(ignoringOtherApps: true)
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
 
     public func start() {
@@ -189,23 +191,25 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Notifications
 
-    /// Request notification permission. Called from General settings button.
+    /// Request notification permission. Activates the app first so macOS
+    /// registers it with the notification system.
     func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            if !granted {
-                // If denied, open System Settings so the user can enable manually.
+        NSApp.activate(ignoringOtherApps: true)
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            if settings.authorizationStatus == .notDetermined {
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    if !granted {
+                        DispatchQueue.main.async {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                        }
+                    }
+                }
+            } else if settings.authorizationStatus == .denied {
                 DispatchQueue.main.async {
                     NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
                 }
             }
-        }
-    }
-
-    /// Check if notifications are authorized (for UI display).
-    var notificationsAuthorized: Bool {
-        get async {
-            let settings = await UNUserNotificationCenter.current().notificationSettings()
-            return settings.authorizationStatus == .authorized
+            // If already authorized, do nothing - they're on.
         }
     }
 

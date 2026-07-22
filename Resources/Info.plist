@@ -37,5 +37,11 @@
     <!-- Outbound network to AI providers. No incoming connections. -->
     <key>NSLocalNetworkUsageDescription</key>
     <string>AIMonitor checks local AI servers such as Ollama.</string>
+
+    <!-- Notifications: declare usage so macOS registers the app. -->
+    <key>NSUserNotificationUsageDescription</key>
+    <string>AIMonitor notifies you when your AI quota is low or resets.</string>
+    <key>NSUserNotificationsUsageDescription</key>
+    <string>AIMonitor notifies you when your AI quota is low or resets.</string>
 </dict>
 </plist>

@@ -27,10 +27,9 @@ enum MonitorMenuBarIcon {
             fallback.isTemplate = true
             return fallback
         }
-        // Rasterise at 4x display size for clean anti-aliased edges, then the
-        // image scales down at render time - no halo/shadow artifacts.
-        let renderSize: CGFloat = 72
-        let displaySize: CGFloat = 18
+        // Render at 4x display size then downscale for crisp, thin edges.
+        let renderSize: CGFloat = 60
+        let displaySize: CGFloat = 15
         let img = NSImage(size: NSSize(width: renderSize, height: renderSize))
         img.lockFocus()
         svgImage.draw(in: NSRect(x: 0, y: 0, width: renderSize, height: renderSize),
