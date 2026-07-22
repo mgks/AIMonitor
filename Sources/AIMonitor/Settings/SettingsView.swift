@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 
 /// Preferences window: General, Providers, About.
 struct SettingsView: View {
@@ -16,7 +15,7 @@ struct SettingsView: View {
             AboutTab()
                 .tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 460, height: 460)
+        .frame(width: 460, height: 420)
     }
 }
 
@@ -27,36 +26,28 @@ private struct GeneralTab: View {
     @AppStorage(AppSettings.Keys.launchAtLogin) private var launchAtLogin = false
     @AppStorage(AppSettings.Keys.refreshInterval) private var interval = AppSettings.defaultRefreshInterval
     @AppStorage(AppSettings.Keys.appearance) private var appearance = "system"
-    @AppStorage(AppSettings.Keys.notifyUnder20) private var notifyUnder20 = true
-    @AppStorage(AppSettings.Keys.notifyUnder10) private var notifyUnder10 = true
-    @AppStorage(AppSettings.Keys.notifyExhausted) private var notifyExhausted = true
-    @AppStorage(AppSettings.Keys.notifyReset) private var notifyReset = false
 
     var body: some View {
         Form {
-            Section("Startup") {
+            Section("General") {
                 Toggle("Launch AIMonitor on login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { newValue in LoginItem.set(newValue) }
-            }
 
-            Section("Refresh") {
-                Picker("Interval", selection: $interval) {
+                Picker("Refresh interval", selection: $interval) {
                     Text("30 seconds").tag(30.0)
                     Text("60 seconds").tag(60.0)
                     Text("5 minutes").tag(300.0)
                 }
                 .onChange(of: interval) { newValue in viewModel.applyRefreshInterval(newValue) }
-            }
 
-            Section("Appearance") {
-                Picker("Theme", selection: $appearance) {
+                Picker("Appearance", selection: $appearance) {
                     ForEach(AppSettings.appearanceOptions, id: \.self) { Text($0.capitalized).tag($0) }
                 }
                 .onChange(of: appearance) { _ in AppearanceManager.apply() }
             }
 
             Section("Menu bar summary") {
-                Toggle("Show usage summary in menu bar", isOn: $viewModel.showSummary)
+                Toggle("Show usage summary", isOn: $viewModel.showSummary)
                     .onChange(of: viewModel.showSummary) { newValue in
                         UserDefaults.standard.set(newValue, forKey: AppSettings.Keys.showSummary)
                     }
@@ -78,16 +69,6 @@ private struct GeneralTab: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                }
-            }
-
-            Section("Notifications") {
-                Toggle("Warn under 20%", isOn: $notifyUnder20)
-                Toggle("Warn under 10%", isOn: $notifyUnder10)
-                Toggle("When exhausted", isOn: $notifyExhausted)
-                Toggle("When quota resets", isOn: $notifyReset)
-                Button("Enable Notifications\u{2026}") {
-                    viewModel.requestNotificationPermission()
                 }
             }
         }
