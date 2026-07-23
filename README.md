@@ -12,6 +12,8 @@ A tiny native macOS menu bar app that shows the remaining usage, limits, and hea
 )](https://github.com/mgks/AIMonitor/releases)
 [![MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
+<img width="720" alt="image" src="https://github.com/user-attachments/assets/4f32ec20-0251-4e2b-9e75-7588f5a2aed8" />
+
 </div>
 
 ## Features
