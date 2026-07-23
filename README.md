@@ -1,23 +1,18 @@
 <div align="center">
 
-<!-- TODO: Replace with a real screenshot of the menu bar popover -->
-<!-- <img src="screenshot.png" width="320" alt="AIMonitor popover"> -->
+<img src="Resources/AppIcon.svg" width="120" alt="AIMonitor popover">
 
 # AIMonitor
 
-Monitor AI service quotas from your menu bar.
-
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](https://github.com/mgks/AIMonitor)
-[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange)](https://github.com/mgks/AIMonitor)
-[![MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-
-</div>
-
----
-
 A tiny native macOS menu bar app that shows the remaining usage, limits, and health of every AI service you use.
 
-No chat. No prompting. No playground. Just a glance at how much you have left.
+[![macOS 13+](https://img.shields.io/badge/macOS_13+-blue?style=flat-square&logo=apple&logoColor=white
+)](https://github.com/mgks/AIMonitor)
+[![GitHub Releases](https://img.shields.io/github/v/release/mgks/AIMonitor?style=flat-square&logo=github&logoColor=white
+)](https://github.com/mgks/AIMonitor/releases)
+[![MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
+</div>
 
 ## Features
 
@@ -32,8 +27,7 @@ No chat. No prompting. No playground. Just a glance at how much you have left.
 
 ## Installation
 
-<!-- TODO: Add download link once a release is published -->
-<!-- Download the latest `.dmg` from [Releases](https://github.com/mgks/AIMonitor/releases) -->
+Download the latest `.dmg` from [Releases](https://github.com/mgks/AIMonitor/releases)
 
 ### Build from source
 
@@ -79,13 +73,6 @@ Paste your key in the Providers tab. Supports international and China endpoints 
 | **Z.ai (GLM)** | International / China | 5h + Weekly Coding Plan quota |
 | **DeepSeek** | International | Account balance (USD/CNY) |
 | **OpenRouter** | International | Credit balance + usage |
-
-## Screenshots
-
-<!-- TODO: Add these screenshots before publishing -->
-<!-- 1. Menu bar popover with provider cards (screenshot-popover.png) -->
-<!-- 2. Preferences > Providers tab with expanded fields (screenshot-providers.png) -->
-<!-- 3. Menu bar icon with summary percentage (screenshot-menubar.png) -->
 
 ## For developers
 
@@ -134,12 +121,4 @@ Each provider implements `AIProvider.fetchStatus(apiKey:)`. The view model passe
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
-
----
-
-<div align="center">
-
-[mgks.dev](https://mgks.dev)
-
-</div>
+MIT
