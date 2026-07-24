@@ -8,7 +8,7 @@ A tiny native macOS menu bar app that shows the remaining usage, limits, and hea
 
 [![macOS 13+](https://img.shields.io/badge/macOS_13+-blue?style=flat-square&logo=apple&logoColor=white
 )](https://github.com/mgks/AIMonitor)
-[![GitHub Releases](https://img.shields.io/github/v/release/mgks/AIMonitor?style=flat-square&logo=github&logoColor=white
+[![GitHub Releases](https://img.shields.io/github/v/release/mgks/aimonitor?style=flat-square&logo=github&logoColor=white
 )](https://github.com/mgks/AIMonitor/releases)
 [![MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
